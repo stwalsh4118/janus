@@ -352,14 +352,55 @@ func TestHeartbeat(t *testing.T) {
 			t.Errorf("expected status 200, got %d", w.Code)
 		}
 
-		var response GenericResponse
+		var response HeartbeatResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		if err != nil {
 			t.Fatalf("failed to parse response: %v", err)
 		}
 
-		if !response.Success {
-			t.Error("expected success to be true")
+		if response.Message != "Heartbeat received" {
+			t.Errorf("expected message 'Heartbeat received', got '%s'", response.Message)
+		}
+
+		if response.SessionID != sess.ID {
+			t.Errorf("expected session_id '%s', got '%s'", sess.ID, response.SessionID)
+		}
+
+		if response.LastActivity.IsZero() {
+			t.Error("expected last_activity to be set")
+		}
+	})
+
+	t.Run("timestamp updates on subsequent heartbeats", func(t *testing.T) {
+		mockManager := NewMockSessionManager()
+		sess, _ := mockManager.CreateSession()
+		handler := NewSessionHandler(mockManager, "/tmp/test-workspace")
+
+		// First heartbeat
+		w1 := httptest.NewRecorder()
+		c1, _ := gin.CreateTestContext(w1)
+		c1.Request = httptest.NewRequest("POST", fmt.Sprintf("/api/heartbeat?session_id=%s", sess.ID), nil)
+		handler.Heartbeat(c1)
+
+		var response1 HeartbeatResponse
+		json.Unmarshal(w1.Body.Bytes(), &response1)
+		firstTimestamp := response1.LastActivity
+
+		// Wait a small amount to ensure timestamp difference
+		time.Sleep(10 * time.Millisecond)
+
+		// Second heartbeat
+		w2 := httptest.NewRecorder()
+		c2, _ := gin.CreateTestContext(w2)
+		c2.Request = httptest.NewRequest("POST", fmt.Sprintf("/api/heartbeat?session_id=%s", sess.ID), nil)
+		handler.Heartbeat(c2)
+
+		var response2 HeartbeatResponse
+		json.Unmarshal(w2.Body.Bytes(), &response2)
+		secondTimestamp := response2.LastActivity
+
+		if !secondTimestamp.After(firstTimestamp) {
+			t.Errorf("expected second timestamp %v to be after first %v", secondTimestamp, firstTimestamp)
 		}
 	})
 }
