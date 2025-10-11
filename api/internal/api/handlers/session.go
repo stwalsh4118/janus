@@ -46,6 +46,12 @@ type GenericResponse struct {
 	Message string `json:"message"`
 }
 
+// EndSessionResponse represents the response for ending a session
+type EndSessionResponse struct {
+	Message   string `json:"message"`
+	SessionID string `json:"session_id"`
+}
+
 // Start handles session start requests
 func (h *SessionHandler) Start(c *gin.Context) {
 	// Create session in manager
@@ -178,30 +184,40 @@ func (h *SessionHandler) Heartbeat(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// End handles session end requests (stub implementation)
+// End handles session end requests
 func (h *SessionHandler) End(c *gin.Context) {
 	sessionID := c.Query("session_id")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "session_id query parameter is required",
+		})
 		return
 	}
 
-	// Check if session exists
+	// Verify session exists
 	_, err := h.sessionManager.GetSession(sessionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "Session not found",
+			"details": err.Error(),
+		})
 		return
 	}
 
-	// End session
+	// Remove session from manager
 	if err := h.sessionManager.EndSession(sessionID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to end session"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to end session",
+			"details": err.Error(),
+		})
 		return
 	}
 
-	response := GenericResponse{
-		Success: true,
-		Message: "Session ended successfully",
+	log.Printf("Session %s ended successfully", sessionID)
+
+	response := EndSessionResponse{
+		Message:   "Session ended successfully",
+		SessionID: sessionID,
 	}
 
 	c.JSON(http.StatusOK, response)
