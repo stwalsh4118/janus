@@ -30,6 +30,15 @@ func main() {
 	// Create session manager
 	sessionManager := session.NewMemorySessionManager()
 
+	// Start cleanup service for inactive sessions
+	sessionTimeout := time.Duration(cfg.SessionTimeoutMinutes) * time.Minute
+	cleanupService := session.NewCleanupService(
+		sessionManager,
+		sessionTimeout,
+		session.DefaultCleanupInterval,
+	)
+	cleanupService.Start()
+
 	// Setup router
 	router := api.SetupRouter(cfg, sessionManager)
 
@@ -57,6 +66,9 @@ func main() {
 	<-quit
 
 	log.Println("Shutting down server...")
+
+	// Stop cleanup service
+	cleanupService.Stop()
 
 	// The context is used to inform the server it has 5 seconds to finish
 	// the request it is currently handling
