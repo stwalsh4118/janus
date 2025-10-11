@@ -1,8 +1,6 @@
 package session
 
 import (
-	"io"
-	"os/exec"
 	"time"
 )
 
@@ -16,17 +14,13 @@ type Message struct {
 // Session represents an active cursor-agent chat session
 type Session struct {
 	ID              string
-	Process         *exec.Cmd
-	Stdin           io.WriteCloser
-	Stdout          io.ReadCloser
+	CursorChatID    string // Cursor-agent's internal chat session ID for --resume
 	CreatedAt       time.Time
 	LastActivity    time.Time
 	ConversationLog []Message
 }
 
 // Clone creates a deep copy of the Session
-// Note: Process, Stdin, and Stdout are not cloned as they represent
-// unique system resources that should not be duplicated
 func (s *Session) Clone() *Session {
 	if s == nil {
 		return nil
@@ -38,9 +32,7 @@ func (s *Session) Clone() *Session {
 
 	return &Session{
 		ID:              s.ID,
-		Process:         s.Process,
-		Stdin:           s.Stdin,
-		Stdout:          s.Stdout,
+		CursorChatID:    s.CursorChatID,
 		CreatedAt:       s.CreatedAt,
 		LastActivity:    s.LastActivity,
 		ConversationLog: conversationCopy,
