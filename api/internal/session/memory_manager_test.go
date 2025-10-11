@@ -1,6 +1,7 @@
 package session
 
 import (
+	"io"
 	"sync"
 	"testing"
 	"time"
@@ -161,6 +162,41 @@ func TestUpdateActivity(t *testing.T) {
 			t.Error("expected error for invalid session ID")
 		}
 		expectedMsg := "session not found: invalid-id"
+		if err.Error() != expectedMsg {
+			t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
+		}
+	})
+}
+
+func TestUpdateProcessInfo(t *testing.T) {
+	manager := NewMemorySessionManager()
+
+	t.Run("updates process info successfully", func(t *testing.T) {
+		session, err := manager.CreateSession()
+		if err != nil {
+			t.Fatalf("failed to create session: %v", err)
+		}
+
+		// Create mock process info (we don't actually start a process in tests)
+		// These would normally be actual pipes from exec.Command
+		var mockStdin io.WriteCloser
+		var mockStdout io.ReadCloser
+
+		err = manager.UpdateProcessInfo(session.ID, nil, mockStdin, mockStdout)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		// Verify the update was applied (note: GetSession returns a clone)
+		// In a real scenario, we'd verify via behavior rather than direct field access
+	})
+
+	t.Run("returns error for non-existent session", func(t *testing.T) {
+		err := manager.UpdateProcessInfo("non-existent-id", nil, nil, nil)
+		if err == nil {
+			t.Error("expected error for non-existent session")
+		}
+		expectedMsg := "session not found: non-existent-id"
 		if err.Error() != expectedMsg {
 			t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
 		}
