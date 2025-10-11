@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"os/exec"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sean/janus/internal/session"
@@ -11,12 +12,14 @@ import (
 // SessionHandler handles session-related requests
 type SessionHandler struct {
 	sessionManager session.Manager
+	workspaceDir   string
 }
 
 // NewSessionHandler creates a new session handler
-func NewSessionHandler(sessionManager session.Manager) *SessionHandler {
+func NewSessionHandler(sessionManager session.Manager, workspaceDir string) *SessionHandler {
 	return &SessionHandler{
 		sessionManager: sessionManager,
+		workspaceDir:   workspaceDir,
 	}
 }
 
@@ -42,11 +45,12 @@ type GenericResponse struct {
 	Message string `json:"message"`
 }
 
-// Start handles session start requests (stub implementation)
+// Start handles session start requests
 func (h *SessionHandler) Start(c *gin.Context) {
-	// Create session in manager (ID generated internally now)
-	session, err := h.sessionManager.CreateSession()
+	// Create session in manager
+	sess, err := h.sessionManager.CreateSession()
 	if err != nil {
+		log.Printf("Failed to create session: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to create session",
 			"details": err.Error(),
@@ -54,9 +58,68 @@ func (h *SessionHandler) Start(c *gin.Context) {
 		return
 	}
 
+	// Spawn cursor-agent process
+	cmd := exec.Command("cursor-agent")
+	cmd.Dir = h.workspaceDir
+
+	// Set up stdin pipe
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Printf("Failed to create stdin pipe for session %s: %v", sess.ID, err)
+		h.sessionManager.EndSession(sess.ID)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to create stdin pipe",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Set up stdout pipe
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Printf("Failed to create stdout pipe for session %s: %v", sess.ID, err)
+		stdin.Close()
+		h.sessionManager.EndSession(sess.ID)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to create stdout pipe",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Start the process
+	if err := cmd.Start(); err != nil {
+		log.Printf("Failed to start cursor-agent process for session %s: %v", sess.ID, err)
+		stdin.Close()
+		stdout.Close()
+		h.sessionManager.EndSession(sess.ID)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to start cursor-agent process",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Update session with process info
+	if err := h.sessionManager.UpdateProcessInfo(sess.ID, cmd, stdin, stdout); err != nil {
+		log.Printf("Failed to update process info for session %s: %v", sess.ID, err)
+		// Try to cleanup
+		stdin.Close()
+		stdout.Close()
+		cmd.Process.Kill()
+		h.sessionManager.EndSession(sess.ID)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to update session with process info",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	log.Printf("Session %s started successfully with cursor-agent process (PID: %d)", sess.ID, cmd.Process.Pid)
+
 	response := StartSessionResponse{
-		SessionID: session.ID,
-		Message:   "Session started successfully (stub implementation)",
+		SessionID: sess.ID,
+		Message:   "Session started successfully",
 	}
 
 	c.JSON(http.StatusOK, response)

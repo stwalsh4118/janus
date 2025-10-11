@@ -24,7 +24,7 @@ func SetupRouter(cfg *config.Config, sessionManager session.Manager) *gin.Engine
 
 	// Create handlers
 	healthHandler := handlers.NewHealthHandler(sessionManager)
-	sessionHandler := handlers.NewSessionHandler(sessionManager)
+	sessionHandler := handlers.NewSessionHandler(sessionManager, cfg.WorkspaceDir)
 
 	// API routes
 	api := router.Group("/api")
