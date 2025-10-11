@@ -1,0 +1,140 @@
+# ============================================
+# Environment files
+# ============================================
+.env
+.env.local
+.env.*.local
+*.env
+
+# ============================================
+# Go Backend (api/)
+# ============================================
+# Binaries
+api/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Coverage
+*.out
+*.cover
+*.coverprofile
+coverage/
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependencies
+vendor/
+
+# Air temp directory
+api/tmp/
+tmp/
+
+# ============================================
+# Node.js / Next.js Frontend (web/)
+# ============================================
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+web/.next/
+web/out/
+.next/
+out/
+
+# Build
+web/build/
+build/
+dist/
+
+# Cache
+.cache/
+*.tsbuildinfo
+next-env.d.ts
+
+# ============================================
+# Logs
+# ============================================
+*.log
+npm-debug.log*
+pnpm-debug.log*
+logs/
+build-errors.log
+
+# ============================================
+# IDE - VSCode
+# ============================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# ============================================
+# IDE - JetBrains (GoLand, IntelliJ, etc.)
+# ============================================
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# ============================================
+# IDE - Vim
+# ============================================
+*.swp
+*.swo
+*~
+.*.swp
+
+# ============================================
+# OS Files
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================================
+# Testing
+# ============================================
+.nyc_output/
+test-results/
+playwright-report/
+
+# ============================================
+# Database
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================
+# Miscellaneous
+# ============================================
+*.tmp
+*.bak
+*.backup
+.turbo
+.vercel
+
+# ============================================
+# Cursor Voice Specific
+# ============================================
+# Keep the directory structure but ignore actual conversation files
+.cursor-voice/conversation-summaries/*.md
+!.cursor-voice/conversation-summaries/.gitkeep
+
