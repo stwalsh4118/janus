@@ -17,6 +17,7 @@ type Config struct {
 	MaxContextSummaries   int
 	GitRecentDays         int
 	CORSAllowedOrigins    string
+	WorkspaceDir          string
 }
 
 const (
@@ -34,6 +35,8 @@ const (
 	DefaultGitRecentDays = 3
 	// DefaultCORSAllowedOrigins is the default CORS allowed origins for development
 	DefaultCORSAllowedOrigins = "http://localhost:3001"
+	// DefaultWorkspaceDir is the default workspace directory for cursor-agent
+	DefaultWorkspaceDir = "."
 )
 
 // Load reads configuration from environment variables
@@ -49,6 +52,7 @@ func Load() (*Config, error) {
 		MaxContextSummaries:   getEnvAsInt("MAX_CONTEXT_SUMMARIES", DefaultMaxContextSummaries),
 		GitRecentDays:         getEnvAsInt("GIT_RECENT_DAYS", DefaultGitRecentDays),
 		CORSAllowedOrigins:    getEnv("CORS_ALLOWED_ORIGINS", DefaultCORSAllowedOrigins),
+		WorkspaceDir:          getEnv("WORKSPACE_DIR", DefaultWorkspaceDir),
 	}
 
 	if err := cfg.Validate(); err != nil {
