@@ -1,7 +1,6 @@
 package session
 
 import (
-	"io"
 	"sync"
 	"testing"
 	"time"
@@ -168,31 +167,91 @@ func TestUpdateActivity(t *testing.T) {
 	})
 }
 
-func TestUpdateProcessInfo(t *testing.T) {
+func TestUpdateCursorChatID(t *testing.T) {
 	manager := NewMemorySessionManager()
 
-	t.Run("updates process info successfully", func(t *testing.T) {
+	t.Run("updates cursor chat ID successfully", func(t *testing.T) {
 		session, err := manager.CreateSession()
 		if err != nil {
 			t.Fatalf("failed to create session: %v", err)
 		}
 
-		// Create mock process info (we don't actually start a process in tests)
-		// These would normally be actual pipes from exec.Command
-		var mockStdin io.WriteCloser
-		var mockStdout io.ReadCloser
-
-		err = manager.UpdateProcessInfo(session.ID, nil, mockStdin, mockStdout)
+		cursorChatID := "test-chat-id-123"
+		err = manager.UpdateCursorChatID(session.ID, cursorChatID)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
 
-		// Verify the update was applied (note: GetSession returns a clone)
-		// In a real scenario, we'd verify via behavior rather than direct field access
+		// Verify the cursor chat ID was updated
+		retrieved, _ := manager.GetSession(session.ID)
+		if retrieved.CursorChatID != cursorChatID {
+			t.Errorf("expected cursor chat ID %q, got %q", cursorChatID, retrieved.CursorChatID)
+		}
 	})
 
 	t.Run("returns error for non-existent session", func(t *testing.T) {
-		err := manager.UpdateProcessInfo("non-existent-id", nil, nil, nil)
+		err := manager.UpdateCursorChatID("non-existent-id", "chat-id")
+		if err == nil {
+			t.Error("expected error for non-existent session")
+		}
+		expectedMsg := "session not found: non-existent-id"
+		if err.Error() != expectedMsg {
+			t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
+		}
+	})
+}
+
+func TestAskQuestion(t *testing.T) {
+	manager := NewMemorySessionManager()
+
+	t.Run("returns error for non-existent session", func(t *testing.T) {
+		_, _, err := manager.AskQuestion("non-existent-id", "test question", "/tmp")
+		if err == nil {
+			t.Error("expected error for non-existent session")
+		}
+	})
+
+	// Note: Full integration test with actual cursor-agent would require cursor-agent to be installed
+	// and would be slow, so we skip it in unit tests. The method is tested via integration tests.
+}
+
+func TestAddToConversationLog(t *testing.T) {
+	manager := NewMemorySessionManager()
+
+	t.Run("adds messages successfully", func(t *testing.T) {
+		session, err := manager.CreateSession()
+		if err != nil {
+			t.Fatalf("failed to create session: %v", err)
+		}
+
+		messages := []Message{
+			{
+				Role:      "user",
+				Content:   "test question",
+				Timestamp: time.Now(),
+			},
+			{
+				Role:      "assistant",
+				Content:   "test answer",
+				Timestamp: time.Now(),
+			},
+		}
+
+		err = manager.AddToConversationLog(session.ID, messages)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		// Verify messages were added
+		retrieved, _ := manager.GetSession(session.ID)
+		if len(retrieved.ConversationLog) != 2 {
+			t.Errorf("expected 2 messages, got %d", len(retrieved.ConversationLog))
+		}
+	})
+
+	t.Run("returns error for non-existent session", func(t *testing.T) {
+		messages := []Message{{Role: "user", Content: "test"}}
+		err := manager.AddToConversationLog("non-existent-id", messages)
 		if err == nil {
 			t.Error("expected error for non-existent session")
 		}
