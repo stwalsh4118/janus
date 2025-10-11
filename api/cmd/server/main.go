@@ -25,6 +25,7 @@ func main() {
 	log.Printf("Starting Cursor Voice Chat server on port %s", cfg.Port)
 	log.Printf("Log level: %s", cfg.LogLevel)
 	log.Printf("CORS allowed origins: %s", cfg.CORSAllowedOrigins)
+	log.Printf("Workspace directory: %s", cfg.WorkspaceDir)
 
 	// Create session manager
 	sessionManager := session.NewMemorySessionManager()
