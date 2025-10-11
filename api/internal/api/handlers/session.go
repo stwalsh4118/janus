@@ -3,7 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
-	"os/exec"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sean/janus/internal/session"
@@ -36,7 +36,8 @@ type AskRequest struct {
 
 // AskResponse represents a response to a question
 type AskResponse struct {
-	Answer string `json:"answer"`
+	Answer    string `json:"answer"`
+	SessionID string `json:"session_id"`
 }
 
 // GenericResponse represents a generic success response
@@ -58,64 +59,7 @@ func (h *SessionHandler) Start(c *gin.Context) {
 		return
 	}
 
-	// Spawn cursor-agent process
-	cmd := exec.Command("cursor-agent")
-	cmd.Dir = h.workspaceDir
-
-	// Set up stdin pipe
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		log.Printf("Failed to create stdin pipe for session %s: %v", sess.ID, err)
-		h.sessionManager.EndSession(sess.ID)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to create stdin pipe",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	// Set up stdout pipe
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Printf("Failed to create stdout pipe for session %s: %v", sess.ID, err)
-		stdin.Close()
-		h.sessionManager.EndSession(sess.ID)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to create stdout pipe",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	// Start the process
-	if err := cmd.Start(); err != nil {
-		log.Printf("Failed to start cursor-agent process for session %s: %v", sess.ID, err)
-		stdin.Close()
-		stdout.Close()
-		h.sessionManager.EndSession(sess.ID)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to start cursor-agent process",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	// Update session with process info
-	if err := h.sessionManager.UpdateProcessInfo(sess.ID, cmd, stdin, stdout); err != nil {
-		log.Printf("Failed to update process info for session %s: %v", sess.ID, err)
-		// Try to cleanup
-		stdin.Close()
-		stdout.Close()
-		cmd.Process.Kill()
-		h.sessionManager.EndSession(sess.ID)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to update session with process info",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	log.Printf("Session %s started successfully with cursor-agent process (PID: %d)", sess.ID, cmd.Process.Pid)
+	log.Printf("Session %s created successfully (cursor chat will be created on first question)", sess.ID)
 
 	response := StartSessionResponse{
 		SessionID: sess.ID,
@@ -125,35 +69,82 @@ func (h *SessionHandler) Start(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Ask handles question requests (stub implementation)
+// Ask handles question requests
 func (h *SessionHandler) Ask(c *gin.Context) {
 	sessionID := c.Query("session_id")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "session_id query parameter is required",
+		})
 		return
 	}
 
-	// Check if session exists
-	_, err := h.sessionManager.GetSession(sessionID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
-		return
-	}
-
+	// Parse request body
 	var req AskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid request body",
+			"details": err.Error(),
+		})
 		return
 	}
 
-	// Update activity (non-critical operation)
+	// Verify session exists
+	_, err := h.sessionManager.GetSession(sessionID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "Session not found",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Ask question using cursor-agent command
+	answer, cursorChatID, err := h.sessionManager.AskQuestion(sessionID, req.Question, h.workspaceDir)
+	if err != nil {
+		log.Printf("Failed to ask question for session %s: %v", sessionID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to get response from cursor-agent",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Update cursor chat ID if this was the first question
+	if err := h.sessionManager.UpdateCursorChatID(sessionID, cursorChatID); err != nil {
+		log.Printf("Warning: failed to update cursor chat ID for session %s: %v", sessionID, err)
+	}
+
+	// Update activity timestamp
 	if err := h.sessionManager.UpdateActivity(sessionID); err != nil {
 		log.Printf("Warning: failed to update activity for session %s: %v", sessionID, err)
 	}
 
-	// Return stub response
+	// Add to conversation log
+	now := time.Now()
+	messages := []session.Message{
+		{
+			Role:      "user",
+			Content:   req.Question,
+			Timestamp: now,
+		},
+		{
+			Role:      "assistant",
+			Content:   answer,
+			Timestamp: time.Now(),
+		},
+	}
+
+	if err := h.sessionManager.AddToConversationLog(sessionID, messages); err != nil {
+		log.Printf("Warning: failed to add to conversation log for session %s: %v", sessionID, err)
+		// Don't fail the request, just log the warning
+	}
+
+	log.Printf("Session %s: Question processed successfully (cursor chat: %s)", sessionID, cursorChatID)
+
 	response := AskResponse{
-		Answer: "This is a stub response. Cursor-agent integration will be implemented in PBI-2. Your question was: " + req.Question,
+		Answer:    answer,
+		SessionID: sessionID,
 	}
 
 	c.JSON(http.StatusOK, response)
