@@ -412,20 +412,61 @@ func TestEnd(t *testing.T) {
 			t.Errorf("expected status 200, got %d", w.Code)
 		}
 
-		var response GenericResponse
+		var response EndSessionResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		if err != nil {
 			t.Fatalf("failed to parse response: %v", err)
 		}
 
-		if !response.Success {
-			t.Error("expected success to be true")
+		if response.Message != "Session ended successfully" {
+			t.Errorf("expected message 'Session ended successfully', got '%s'", response.Message)
+		}
+
+		if response.SessionID != sess.ID {
+			t.Errorf("expected session_id '%s', got '%s'", sess.ID, response.SessionID)
 		}
 
 		// Verify session was removed
 		_, err = mockManager.GetSession(sess.ID)
 		if err == nil {
 			t.Error("expected session to be removed")
+		}
+	})
+
+	t.Run("ending session twice returns 404 second time", func(t *testing.T) {
+		mockManager := NewMockSessionManager()
+		sess, _ := mockManager.CreateSession()
+		handler := NewSessionHandler(mockManager, "/tmp/test-workspace")
+
+		// End session first time
+		w1 := httptest.NewRecorder()
+		c1, _ := gin.CreateTestContext(w1)
+		c1.Request = httptest.NewRequest("POST", fmt.Sprintf("/api/session/end?session_id=%s", sess.ID), nil)
+		handler.End(c1)
+
+		if w1.Code != http.StatusOK {
+			t.Errorf("first end: expected status 200, got %d", w1.Code)
+		}
+
+		// Try to end same session again
+		w2 := httptest.NewRecorder()
+		c2, _ := gin.CreateTestContext(w2)
+		c2.Request = httptest.NewRequest("POST", fmt.Sprintf("/api/session/end?session_id=%s", sess.ID), nil)
+		handler.End(c2)
+
+		if w2.Code != http.StatusNotFound {
+			t.Errorf("second end: expected status 404, got %d", w2.Code)
+		}
+
+		// Verify error message
+		var errorResponse map[string]interface{}
+		err := json.Unmarshal(w2.Body.Bytes(), &errorResponse)
+		if err != nil {
+			t.Fatalf("failed to parse error response: %v", err)
+		}
+
+		if errorResponse["error"] != "Session not found" {
+			t.Errorf("expected error 'Session not found', got '%v'", errorResponse["error"])
 		}
 	})
 }
