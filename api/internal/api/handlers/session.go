@@ -52,6 +52,13 @@ type EndSessionResponse struct {
 	SessionID string `json:"session_id"`
 }
 
+// HeartbeatResponse represents the response for a heartbeat request
+type HeartbeatResponse struct {
+	Message      string    `json:"message"`
+	SessionID    string    `json:"session_id"`
+	LastActivity time.Time `json:"last_activity"`
+}
+
 // Start handles session start requests
 func (h *SessionHandler) Start(c *gin.Context) {
 	// Create session in manager
@@ -156,29 +163,52 @@ func (h *SessionHandler) Ask(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Heartbeat handles heartbeat requests (stub implementation)
+// Heartbeat handles heartbeat requests
 func (h *SessionHandler) Heartbeat(c *gin.Context) {
 	sessionID := c.Query("session_id")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "session_id query parameter is required",
+		})
 		return
 	}
 
-	// Check if session exists
+	// Verify session exists
 	_, err := h.sessionManager.GetSession(sessionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "Session not found",
+			"details": err.Error(),
+		})
 		return
 	}
 
-	// Update activity (non-critical operation)
+	// Update activity timestamp
 	if err := h.sessionManager.UpdateActivity(sessionID); err != nil {
-		log.Printf("Warning: failed to update activity for session %s: %v", sessionID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to update session activity",
+			"details": err.Error(),
+		})
+		return
 	}
 
-	response := GenericResponse{
-		Success: true,
-		Message: "Heartbeat received",
+	// Get updated session to return new timestamp
+	sess, err := h.sessionManager.GetSession(sessionID)
+	if err != nil {
+		// Unlikely since we just updated it, but handle anyway
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to retrieve updated session",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	log.Printf("Heartbeat received for session %s", sessionID)
+
+	response := HeartbeatResponse{
+		Message:      "Heartbeat received",
+		SessionID:    sessionID,
+		LastActivity: sess.LastActivity,
 	}
 
 	c.JSON(http.StatusOK, response)
