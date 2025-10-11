@@ -9,7 +9,7 @@ import (
 )
 
 // SetupRouter configures and returns a Gin router
-func SetupRouter(cfg *config.Config, sessionManager *session.Manager) *gin.Engine {
+func SetupRouter(cfg *config.Config, sessionManager session.Manager) *gin.Engine {
 	// Set Gin mode based on log level
 	if cfg.LogLevel == "debug" {
 		gin.SetMode(gin.DebugMode)

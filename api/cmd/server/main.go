@@ -26,8 +26,8 @@ func main() {
 	log.Printf("Log level: %s", cfg.LogLevel)
 	log.Printf("CORS allowed origins: %s", cfg.CORSAllowedOrigins)
 
-	// Create session manager
-	sessionManager := session.NewManager()
+	// Create session manager (stub implementation for now - will be replaced with MemorySessionManager in task 1-2)
+	sessionManager := session.NewStubManager()
 
 	// Setup router
 	router := api.SetupRouter(cfg, sessionManager)

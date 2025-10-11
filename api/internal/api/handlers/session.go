@@ -1,20 +1,20 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/sean/janus/internal/session"
 )
 
 // SessionHandler handles session-related requests
 type SessionHandler struct {
-	sessionManager *session.Manager
+	sessionManager session.Manager
 }
 
 // NewSessionHandler creates a new session handler
-func NewSessionHandler(sessionManager *session.Manager) *SessionHandler {
+func NewSessionHandler(sessionManager session.Manager) *SessionHandler {
 	return &SessionHandler{
 		sessionManager: sessionManager,
 	}
@@ -44,14 +44,18 @@ type GenericResponse struct {
 
 // Start handles session start requests (stub implementation)
 func (h *SessionHandler) Start(c *gin.Context) {
-	// Generate a new session ID
-	sessionID := uuid.New().String()
-
-	// Create session in manager
-	h.sessionManager.CreateSession(sessionID)
+	// Create session in manager (ID generated internally now)
+	session, err := h.sessionManager.CreateSession()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to create session",
+			"details": err.Error(),
+		})
+		return
+	}
 
 	response := StartSessionResponse{
-		SessionID: sessionID,
+		SessionID: session.ID,
 		Message:   "Session started successfully (stub implementation)",
 	}
 
@@ -67,8 +71,8 @@ func (h *SessionHandler) Ask(c *gin.Context) {
 	}
 
 	// Check if session exists
-	_, exists := h.sessionManager.GetSession(sessionID)
-	if !exists {
+	_, err := h.sessionManager.GetSession(sessionID)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 		return
 	}
@@ -79,8 +83,10 @@ func (h *SessionHandler) Ask(c *gin.Context) {
 		return
 	}
 
-	// Update activity
-	h.sessionManager.UpdateActivity(sessionID)
+	// Update activity (non-critical operation)
+	if err := h.sessionManager.UpdateActivity(sessionID); err != nil {
+		log.Printf("Warning: failed to update activity for session %s: %v", sessionID, err)
+	}
 
 	// Return stub response
 	response := AskResponse{
@@ -99,14 +105,16 @@ func (h *SessionHandler) Heartbeat(c *gin.Context) {
 	}
 
 	// Check if session exists
-	_, exists := h.sessionManager.GetSession(sessionID)
-	if !exists {
+	_, err := h.sessionManager.GetSession(sessionID)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 		return
 	}
 
-	// Update activity
-	h.sessionManager.UpdateActivity(sessionID)
+	// Update activity (non-critical operation)
+	if err := h.sessionManager.UpdateActivity(sessionID); err != nil {
+		log.Printf("Warning: failed to update activity for session %s: %v", sessionID, err)
+	}
 
 	response := GenericResponse{
 		Success: true,
@@ -125,14 +133,17 @@ func (h *SessionHandler) End(c *gin.Context) {
 	}
 
 	// Check if session exists
-	_, exists := h.sessionManager.GetSession(sessionID)
-	if !exists {
+	_, err := h.sessionManager.GetSession(sessionID)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 		return
 	}
 
 	// End session
-	h.sessionManager.EndSession(sessionID)
+	if err := h.sessionManager.EndSession(sessionID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to end session"})
+		return
+	}
 
 	response := GenericResponse{
 		Success: true,

@@ -12,11 +12,11 @@ var startTime = time.Now()
 
 // HealthHandler handles health check requests
 type HealthHandler struct {
-	sessionManager *session.Manager
+	sessionManager session.Manager
 }
 
 // NewHealthHandler creates a new health handler
-func NewHealthHandler(sessionManager *session.Manager) *HealthHandler {
+func NewHealthHandler(sessionManager session.Manager) *HealthHandler {
 	return &HealthHandler{
 		sessionManager: sessionManager,
 	}
@@ -34,11 +34,14 @@ type HealthResponse struct {
 func (h *HealthHandler) Handle(c *gin.Context) {
 	uptime := time.Since(startTime).Seconds()
 
+	// Get active session count using new interface
+	activeSessions := len(h.sessionManager.GetAllSessions())
+
 	response := HealthResponse{
 		Status:         "ok",
 		Version:        "1.0.0",
 		UptimeSeconds:  int64(uptime),
-		ActiveSessions: h.sessionManager.GetActiveSessions(),
+		ActiveSessions: activeSessions,
 	}
 
 	c.JSON(http.StatusOK, response)
