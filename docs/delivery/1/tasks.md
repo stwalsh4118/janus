@@ -8,7 +8,7 @@ This document lists all tasks associated with PBI 1.
 
 | Task ID | Name | Status | Description |
 | :------ | :--------------------------------------- | :------- | :--------------------------------- |
-| 1-1 | [Define Session data structures and interfaces](./1-1.md) | Review | Define Session, Message types and SessionManager interface |
+| 1-1 | [Define Session data structures and interfaces](./1-1.md) | Done | Define Session, Message types and SessionManager interface |
 | 1-2 | [Implement SessionManager with thread-safe operations](./1-2.md) | Proposed | Implement in-memory session manager with mutex-based concurrency control |
 | 1-3 | [Implement POST /api/session/start endpoint](./1-3.md) | Proposed | Create session, spawn cursor-agent process, return session_id |
 | 1-4 | [Implement POST /api/ask endpoint](./1-4.md) | Proposed | Handle questions, communicate with cursor-agent, return responses |
