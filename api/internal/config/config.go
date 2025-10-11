@@ -27,7 +27,7 @@ const (
 	// DefaultSessionTimeoutMinutes is the default session timeout
 	DefaultSessionTimeoutMinutes = 10
 	// DefaultContextDir is the default context directory
-	DefaultContextDir = ".cursor-voice"
+	DefaultContextDir = ".janus"
 	// DefaultMaxContextSummaries is the default number of summaries to load
 	DefaultMaxContextSummaries = 3
 	// DefaultGitRecentDays is the default number of days for recent files

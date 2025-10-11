@@ -132,9 +132,9 @@ playwright-report/
 .vercel
 
 # ============================================
-# Cursor Voice Specific
+# Janus Specific
 # ============================================
 # Keep the directory structure but ignore actual conversation files
-.cursor-voice/conversation-summaries/*.md
-!.cursor-voice/conversation-summaries/.gitkeep
+.janus/conversation-summaries/*.md
+!.janus/conversation-summaries/.gitkeep
 

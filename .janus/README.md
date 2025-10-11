@@ -1,11 +1,11 @@
-# Cursor Voice Context Directory
+# Janus Context Directory
 
-This directory contains context files that are automatically loaded when starting a cursor-agent session. These files help cursor understand your project and recent work without requiring manual explanation.
+This directory contains context files that are automatically loaded when starting an AI agent session. These files help the agent understand your project and recent work without requiring manual explanation.
 
 ## 📁 Directory Structure
 
 ```
-.cursor-voice/
+.janus/
 ├── README.md                    # This file
 ├── system-prompt.md            # Voice-specific instructions (to be created)
 ├── project-overview.md         # Project architecture and key areas (to be created)
@@ -18,7 +18,7 @@ This directory contains context files that are automatically loaded when startin
 ## 📄 Context Files
 
 ### system-prompt.md (Required)
-Voice-specific instructions for cursor to optimize responses for audio consumption:
+Voice-specific instructions for the AI agent to optimize responses for audio consumption:
 - Prefer concise answers
 - Explain complex concepts simply
 - Provide examples when helpful
@@ -63,11 +63,11 @@ When a new session starts, the backend will:
 4. Read the 2-3 most recent conversation summaries
 5. Execute `git diff --name-only HEAD~3..HEAD` for recent files
 6. Assemble all context into an initialization message
-7. Send to cursor-agent before the first user question
+7. Send to AI agent before the first user question
 
 ### Manual Updates
 You can update context files anytime:
-- Edit `system-prompt.md` to adjust cursor's behavior
+- Edit `system-prompt.md` to adjust the agent's behavior
 - Update `project-overview.md` when architecture changes
 - Update `active-context.md` daily to reflect current work
 - Conversation summaries are auto-generated, but you can edit them
@@ -77,7 +77,7 @@ You can update context files anytime:
 Context loading is configured via environment variables:
 
 ```bash
-CONTEXT_DIR=.cursor-voice              # Default location
+CONTEXT_DIR=.janus                     # Default location
 MAX_CONTEXT_SUMMARIES=3                # Number of past summaries to load
 GIT_RECENT_DAYS=3                      # Days of git history to include
 ```

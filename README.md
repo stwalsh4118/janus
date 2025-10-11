@@ -1,23 +1,27 @@
-# Cursor Voice Chat
+# Janus
 
-Voice-enabled interface for asking cursor-agent questions about your codebase while driving or away from your desk.
+Voice-enabled portal to your codebase. Ask AI coding agents questions hands-free while driving or away from your desk.
+
+> **Janus** - Roman god of doors, gates, and transitions. Your voice-controlled gateway between you and your code.
 
 ## 🎯 Features
 
 - 🎤 **Voice Input** - Push-to-talk interface using Web Speech API
 - 🔊 **Text-to-Speech** - Automatic audio responses
 - 📱 **Mobile-Optimized** - Designed for phone use with large touch targets
-- 🤖 **Cursor Integration** - Full cursor-agent integration with codebase context
+- 🤖 **Agent Integration** - Pluggable support for AI coding agents (cursor-agent, aider, etc.)
 - 💾 **Conversation History** - Automatic session summaries and context preservation
 - 🔒 **Secure** - Access via Tailscale for private network access
+- 🔌 **Extensible** - Easy to add support for new AI agents
 
 ## 📋 Prerequisites
 
 - **Go** 1.25.0+ (latest stable)
 - **Node.js** 22+ (LTS)
 - **pnpm** (package manager)
-- **air** (Go hot reload, install globally)
+- **air** (Go hot reload, installed globally)
 - **Git** for version control
+- **AI Agent** (cursor-agent for initial implementation, others can be added)
 
 ## 🚀 Quick Start
 
@@ -36,7 +40,8 @@ cp .env.example .env
 
 # Edit .env and set required values
 # - PORT (default: 3000)
-# - CURSOR_API_KEY (get from https://cursor.sh/settings - needed for PBI-2)
+# - AGENT_TYPE (cursor, aider, etc. - default: cursor)
+# - AGENT_API_KEY (get from your AI agent provider - needed for PBI-2)
 # - CODEBASE_PATH (path to your codebase - needed for PBI-2)
 ```
 
@@ -87,7 +92,7 @@ janus/
 ├── docs/                   # Project documentation
 │   └── delivery/         # PBI and task documentation
 │
-├── .cursor-voice/         # Context files for cursor integration
+├── .janus/                # Context files for agent integration
 │   ├── conversation-summaries/  # Auto-generated summaries
 │   └── README.md         # Context directory explanation
 │
@@ -155,12 +160,13 @@ Testing will be implemented in PBI-0 task 0-5.
 - **TypeScript 5.9.3** - Type safety
 - **Tailwind CSS 4.1.14** - Styling
 - **shadcn/ui** - Component library (54 components)
-- **Web Speech API** - Voice input/output (will be implemented in PBI-4)
+- **Web Speech API** - Voice input/output (PBI-4)
 
 ### Infrastructure
 - **pnpm** - Fast package manager
 - **air** - Go hot reload
 - **Tailscale** - Secure network access (for remote use)
+- **Pluggable Agents** - Support for cursor-agent (initial), aider, and more
 
 ## 🗺️ Roadmap
 
@@ -174,8 +180,8 @@ Current implementation status (PBI-0 - Project Structure):
 
 Upcoming features:
 
-- **PBI-1**: Backend session management with cursor-agent
-- **PBI-2**: Cursor-agent process integration
+- **PBI-1**: Backend session management with AI agents
+- **PBI-2**: AI agent process integration (cursor-agent first)
 - **PBI-3**: Automatic context initialization
 - **PBI-4**: Voice input/output with Web Speech API
 - **PBI-5**: Conversation summaries and history
@@ -208,7 +214,7 @@ MIT
 - Backend health check: `curl http://localhost:3000/api/health`
 - Frontend and backend must both be running for full functionality
 - Check `.env.example` for all available configuration options
-- Conversation summaries will be stored in `.cursor-voice/conversation-summaries/` (implemented in PBI-5)
+- Conversation summaries will be stored in `.janus/conversation-summaries/` (implemented in PBI-5)
 
 ## 🐛 Troubleshooting
 

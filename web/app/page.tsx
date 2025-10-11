@@ -94,9 +94,9 @@ export default function Home() {
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight">Cursor Voice Chat</h1>
+          <h1 className="text-4xl font-bold tracking-tight">Janus</h1>
           <p className="mt-2 text-muted-foreground">
-            Ask questions about your codebase hands-free
+            Your voice portal to the codebase
           </p>
         </div>
 

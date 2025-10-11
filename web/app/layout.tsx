@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cursor Voice Chat",
-  description: "Voice-enabled interface for asking cursor-agent questions about your codebase",
+  title: "Janus - Voice Portal to Your Codebase",
+  description: "Voice-enabled interface for asking AI coding agents questions about your codebase hands-free",
 };
 
 export const viewport = {

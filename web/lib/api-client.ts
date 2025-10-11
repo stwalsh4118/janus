@@ -5,7 +5,7 @@ import type {
   AskResponse,
 } from "./types";
 
-export class CursorVoiceClient {
+export class JanusApiClient {
   private baseUrl: string;
 
   constructor(baseUrl: string) {
@@ -109,5 +109,5 @@ export class CursorVoiceClient {
 
 // Create a singleton instance
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-export const apiClient = new CursorVoiceClient(apiUrl);
+export const apiClient = new JanusApiClient(apiUrl);
 
