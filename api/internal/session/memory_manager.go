@@ -1,8 +1,9 @@
 package session
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"sync"
 	"time"
@@ -74,8 +75,8 @@ func (m *MemorySessionManager) UpdateActivity(id string) error {
 	return nil
 }
 
-// UpdateProcessInfo updates the process information for a session
-func (m *MemorySessionManager) UpdateProcessInfo(id string, process *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) error {
+// UpdateCursorChatID updates the cursor-agent chat session ID for a session
+func (m *MemorySessionManager) UpdateCursorChatID(id string, cursorChatID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -84,9 +85,78 @@ func (m *MemorySessionManager) UpdateProcessInfo(id string, process *exec.Cmd, s
 		return fmt.Errorf("session not found: %s", id)
 	}
 
-	session.Process = process
-	session.Stdin = stdin
-	session.Stdout = stdout
+	session.CursorChatID = cursorChatID
+	return nil
+}
+
+// CursorAgentResponse represents the JSON response from cursor-agent --print --output-format json
+type CursorAgentResponse struct {
+	Type      string `json:"type"`
+	Subtype   string `json:"subtype"`
+	IsError   bool   `json:"is_error"`
+	Result    string `json:"result"`
+	SessionID string `json:"session_id"`
+}
+
+// AskQuestion sends a question to cursor-agent and returns the answer
+// It runs cursor-agent as a command with --print and --resume flags
+func (m *MemorySessionManager) AskQuestion(id string, question string, workspaceDir string) (string, string, error) {
+	m.mu.RLock()
+	session, exists := m.sessions[id]
+	m.mu.RUnlock()
+
+	if !exists {
+		return "", "", fmt.Errorf("session not found: %s", id)
+	}
+
+	// Build cursor-agent command
+	args := []string{"--print", "--output-format", "json"}
+
+	// If we have a cursor chat ID, resume that conversation
+	if session.CursorChatID != "" {
+		args = append(args, "--resume", session.CursorChatID)
+	}
+
+	args = append(args, question)
+
+	cmd := exec.Command("cursor-agent", args...)
+	cmd.Dir = workspaceDir
+
+	// Capture output
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	// Run command
+	if err := cmd.Run(); err != nil {
+		return "", "", fmt.Errorf("cursor-agent command failed: %w, stderr: %s", err, stderr.String())
+	}
+
+	// Parse JSON response
+	var response CursorAgentResponse
+	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
+		return "", "", fmt.Errorf("failed to parse cursor-agent response: %w, output: %s", err, stdout.String())
+	}
+
+	// Check for errors in response
+	if response.IsError {
+		return "", "", fmt.Errorf("cursor-agent returned error: %s", response.Result)
+	}
+
+	return response.Result, response.SessionID, nil
+}
+
+// AddToConversationLog appends messages to the session's conversation log
+func (m *MemorySessionManager) AddToConversationLog(id string, messages []Message) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	session, exists := m.sessions[id]
+	if !exists {
+		return fmt.Errorf("session not found: %s", id)
+	}
+
+	session.ConversationLog = append(session.ConversationLog, messages...)
 	return nil
 }
 
