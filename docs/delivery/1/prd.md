@@ -106,5 +106,5 @@ N/A - Backend only component. Frontend interaction is through API.
 
 ## Related Tasks
 
-Tasks will be created when PBI moves to "Agreed" status.
+See [tasks.md](./tasks.md) for the complete list of tasks associated with this PBI.
 
