@@ -2,6 +2,8 @@ package session
 
 import (
 	"fmt"
+	"io"
+	"os/exec"
 	"sync"
 	"time"
 
@@ -69,6 +71,22 @@ func (m *MemorySessionManager) UpdateActivity(id string) error {
 	}
 
 	session.LastActivity = time.Now()
+	return nil
+}
+
+// UpdateProcessInfo updates the process information for a session
+func (m *MemorySessionManager) UpdateProcessInfo(id string, process *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	session, exists := m.sessions[id]
+	if !exists {
+		return fmt.Errorf("session not found: %s", id)
+	}
+
+	session.Process = process
+	session.Stdin = stdin
+	session.Stdout = stdout
 	return nil
 }
 
