@@ -31,6 +31,26 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/manifest.json" />
+        
+        {/* Mobile Web App Capable */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        
+        {/* Theme Colors */}
+        <meta name="theme-color" content="#000000" />
+        <meta name="apple-mobile-web-app-title" content="Janus" />
+        
+        {/* Icons */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        
+        {/* Disable phone number detection */}
+        <meta name="format-detection" content="telephone=no" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
