@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -205,7 +206,8 @@ func TestAskQuestion(t *testing.T) {
 	manager := NewMemorySessionManager()
 
 	t.Run("returns error for non-existent session", func(t *testing.T) {
-		_, _, err := manager.AskQuestion("non-existent-id", "test question", "/tmp")
+		ctx := context.Background()
+		_, _, err := manager.AskQuestion(ctx, "non-existent-id", "test question", "/tmp")
 		if err == nil {
 			t.Error("expected error for non-existent session")
 		}

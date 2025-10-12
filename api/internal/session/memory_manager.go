@@ -2,6 +2,7 @@ package session
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -100,7 +101,8 @@ type CursorAgentResponse struct {
 
 // AskQuestion sends a question to cursor-agent and returns the answer
 // It runs cursor-agent as a command with --print and --resume flags
-func (m *MemorySessionManager) AskQuestion(id string, question string, workspaceDir string) (string, string, error) {
+// The context is used to cancel the command if the request times out
+func (m *MemorySessionManager) AskQuestion(ctx context.Context, id string, question string, workspaceDir string) (string, string, error) {
 	m.mu.RLock()
 	session, exists := m.sessions[id]
 	m.mu.RUnlock()
@@ -119,7 +121,8 @@ func (m *MemorySessionManager) AskQuestion(id string, question string, workspace
 
 	args = append(args, question)
 
-	cmd := exec.Command("cursor-agent", args...)
+	// Use CommandContext to respect timeout/cancellation
+	cmd := exec.CommandContext(ctx, "cursor-agent", args...)
 	cmd.Dir = workspaceDir
 
 	// Capture output
@@ -127,8 +130,12 @@ func (m *MemorySessionManager) AskQuestion(id string, question string, workspace
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// Run command
+	// Run command - will be killed if context is cancelled
 	if err := cmd.Run(); err != nil {
+		// Check if error was due to context cancellation
+		if ctx.Err() != nil {
+			return "", "", fmt.Errorf("cursor-agent command cancelled: %w", ctx.Err())
+		}
 		return "", "", fmt.Errorf("cursor-agent command failed: %w, stderr: %s", err, stderr.String())
 	}
 

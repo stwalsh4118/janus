@@ -1,6 +1,9 @@
 package session
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // Manager handles session lifecycle operations
 type Manager interface {
@@ -8,7 +11,7 @@ type Manager interface {
 	GetSession(id string) (*Session, error)
 	UpdateActivity(id string) error
 	UpdateCursorChatID(id string, cursorChatID string) error
-	AskQuestion(id string, question string, workspaceDir string) (answer string, cursorChatID string, err error)
+	AskQuestion(ctx context.Context, id string, question string, workspaceDir string) (answer string, cursorChatID string, err error)
 	AddToConversationLog(id string, messages []Message) error
 	EndSession(id string) error
 	GetAllSessions() []*Session
