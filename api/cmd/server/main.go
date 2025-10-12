@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/sean/janus/internal/api"
 	"github.com/sean/janus/internal/config"
+	"github.com/sean/janus/internal/logger"
 	"github.com/sean/janus/internal/session"
 )
 
@@ -19,13 +19,22 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
+		os.Exit(1)
 	}
 
-	log.Printf("Starting Cursor Voice Chat server on port %s", cfg.Port)
-	log.Printf("Log level: %s", cfg.LogLevel)
-	log.Printf("CORS allowed origins: %s", cfg.CORSAllowedOrigins)
-	log.Printf("Workspace directory: %s", cfg.WorkspaceDir)
+	// Initialize logger
+	logger.Init(cfg.LogLevel)
+	log := logger.Get()
+
+	log.Info().
+		Str("port", cfg.Port).
+		Msg("Starting Cursor Voice Chat server")
+	log.Info().
+		Str("log_level", cfg.LogLevel).
+		Str("cors_origins", cfg.CORSAllowedOrigins).
+		Str("workspace_dir", cfg.WorkspaceDir).
+		Msg("Configuration loaded")
 
 	// Create session manager
 	sessionManager := session.NewMemorySessionManager()
@@ -50,10 +59,12 @@ func main() {
 
 	// Start server in a goroutine
 	go func() {
-		log.Printf("Server listening on http://localhost:%s", cfg.Port)
-		log.Printf("Health check: http://localhost:%s/api/health", cfg.Port)
+		log.Info().
+			Str("address", fmt.Sprintf("http://localhost:%s", cfg.Port)).
+			Str("health_check", fmt.Sprintf("http://localhost:%s/api/health", cfg.Port)).
+			Msg("Server listening")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			log.Fatal().Err(err).Msg("Failed to start server")
 		}
 	}()
 
@@ -65,7 +76,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	log.Info().Msg("Shutting down server...")
 
 	// Stop cleanup service
 	cleanupService.Stop()
@@ -76,8 +87,8 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown:", err)
+		log.Fatal().Err(err).Msg("Server forced to shutdown")
 	}
 
-	log.Println("Server exited")
+	log.Info().Msg("Server exited")
 }

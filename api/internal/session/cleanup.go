@@ -2,9 +2,10 @@ package session
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
+
+	"github.com/sean/janus/internal/logger"
 )
 
 const (
@@ -36,13 +37,16 @@ func NewCleanupService(manager Manager, timeout time.Duration, interval time.Dur
 
 // Start begins the cleanup goroutine
 func (s *CleanupService) Start() {
-	log.Printf("Starting cleanup service (checking every %v, timeout %v)", s.interval, s.timeout)
+	logger.Get().Info().
+		Dur("interval", s.interval).
+		Dur("timeout", s.timeout).
+		Msg("Starting cleanup service")
 	go s.run()
 }
 
 // Stop gracefully stops the cleanup goroutine
 func (s *CleanupService) Stop() {
-	log.Println("Stopping cleanup service...")
+	logger.Get().Info().Msg("Stopping cleanup service")
 	s.stopOnce.Do(func() {
 		s.cancel()
 	})
@@ -56,7 +60,7 @@ func (s *CleanupService) run() {
 	for {
 		select {
 		case <-s.ctx.Done():
-			log.Println("Cleanup service stopped")
+			logger.Get().Info().Msg("Cleanup service stopped")
 			return
 		case <-ticker.C:
 			s.cleanupInactiveSessions()
@@ -77,7 +81,9 @@ func (s *CleanupService) cleanupInactiveSessions() {
 
 	if sessionsBefore != sessionsAfter {
 		removed := sessionsBefore - sessionsAfter
-		log.Printf("Cleanup: removed %d inactive session(s), %d active session(s) remaining",
-			removed, sessionsAfter)
+		logger.Get().Info().
+			Int("removed", removed).
+			Int("active", sessionsAfter).
+			Msg("Cleaned up inactive sessions")
 	}
 }
