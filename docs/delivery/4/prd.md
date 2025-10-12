@@ -197,5 +197,5 @@ class CursorVoiceClient {
 
 ## Related Tasks
 
-Tasks will be created when PBI moves to "Agreed" status.
+See [tasks.md](./tasks.md) for the complete list of implementation tasks.
 
