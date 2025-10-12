@@ -16,7 +16,7 @@ This document lists all tasks associated with PBI 1.
 | 1-6 | [Implement POST /api/heartbeat endpoint](./1-6.md) | Done | Update LastActivity timestamp to keep session alive |
 | 1-7 | [Implement background session cleanup mechanism](./1-7.md) | Done | Background goroutine to terminate inactive sessions after 10 minutes |
 | 1-8 | [Enhance GET /api/health endpoint with session metrics](./1-8.md) | Done | Add active session count and memory usage to health check |
-| 1-9 | [Add comprehensive error handling and request timeouts](./1-9.md) | Proposed | Implement 60s timeout for cursor responses and consistent error format |
+| 1-9 | [Add comprehensive error handling and request timeouts](./1-9.md) | Done | Implement 60s timeout for cursor responses and consistent error format |
 | 1-10 | [E2E CoS Test - Verify session management](./1-10.md) | Proposed | End-to-end test verifying all session management acceptance criteria |
 
 
