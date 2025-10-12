@@ -5,6 +5,7 @@ import (
 	"github.com/sean/janus/internal/api/handlers"
 	"github.com/sean/janus/internal/api/middleware"
 	"github.com/sean/janus/internal/config"
+	"github.com/sean/janus/internal/logger"
 	"github.com/sean/janus/internal/session"
 )
 
@@ -17,10 +18,15 @@ func SetupRouter(cfg *config.Config, sessionManager session.Manager) *gin.Engine
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	router := gin.Default()
+	// Use gin.New() instead of Default() to have full control over middleware
+	router := gin.New()
 
-	// Apply CORS middleware
-	router.Use(middleware.CORSConfig(cfg.CORSAllowedOrigins))
+	// Apply middleware in correct order
+	router.Use(middleware.Recovery())                                       // 1st - catch panics
+	router.Use(middleware.RequestID())                                      // 2nd - add request ID
+	router.Use(middleware.Logger())                                         // 3rd - log with ID
+	router.Use(middleware.RequestTimeout(middleware.DefaultRequestTimeout)) // 4th - enforce timeout
+	router.Use(middleware.CORSConfig(cfg.CORSAllowedOrigins))               // 5th - CORS headers
 
 	// Create handlers
 	healthHandler := handlers.NewHealthHandler(sessionManager)
@@ -39,5 +45,25 @@ func SetupRouter(cfg *config.Config, sessionManager session.Manager) *gin.Engine
 		api.POST("/session/end", sessionHandler.End)
 	}
 
+	// Log registered routes
+	logRoutes(router)
+
 	return router
+}
+
+// logRoutes logs all registered routes with zerolog
+func logRoutes(router *gin.Engine) {
+	routes := router.Routes()
+
+	logger.Get().Info().
+		Int("total", len(routes)).
+		Msg("Routes registered")
+
+	for _, route := range routes {
+		logger.Get().Info().
+			Str("method", route.Method).
+			Str("path", route.Path).
+			Str("handler", route.Handler).
+			Msgf("%-6s %s", route.Method, route.Path)
+	}
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,7 +21,7 @@ type MockSessionManager struct {
 	getSessionError         error
 	updateActivityError     error
 	updateCursorChatIDError error
-	askQuestionFunc         func(id string, question string, workspaceDir string) (string, string, error)
+	askQuestionFunc         func(ctx context.Context, id string, question string, workspaceDir string) (string, string, error)
 	addToLogError           error
 	endSessionError         error
 }
@@ -80,9 +81,9 @@ func (m *MockSessionManager) UpdateCursorChatID(id string, cursorChatID string) 
 	return nil
 }
 
-func (m *MockSessionManager) AskQuestion(id string, question string, workspaceDir string) (string, string, error) {
+func (m *MockSessionManager) AskQuestion(ctx context.Context, id string, question string, workspaceDir string) (string, string, error) {
 	if m.askQuestionFunc != nil {
-		return m.askQuestionFunc(id, question, workspaceDir)
+		return m.askQuestionFunc(ctx, id, question, workspaceDir)
 	}
 	sess, exists := m.sessions[id]
 	if !exists {
@@ -188,8 +189,11 @@ func TestStartSession(t *testing.T) {
 			t.Fatalf("failed to parse error response: %v", err)
 		}
 
-		if response["error"] != "Failed to create session" {
-			t.Errorf("unexpected error message: %v", response["error"])
+		if response["error"] != "INTERNAL_SERVER_ERROR" {
+			t.Errorf("unexpected error code: %v", response["error"])
+		}
+		if response["details"] != "Failed to create session" {
+			t.Errorf("unexpected error details: %v", response["details"])
 		}
 	})
 }
@@ -284,7 +288,7 @@ func TestAsk(t *testing.T) {
 		sess, _ := mockManager.CreateSession()
 
 		// Mock cursor-agent failure
-		mockManager.askQuestionFunc = func(id string, question string, workspaceDir string) (string, string, error) {
+		mockManager.askQuestionFunc = func(ctx context.Context, id string, question string, workspaceDir string) (string, string, error) {
 			return "", "", fmt.Errorf("cursor-agent command failed")
 		}
 
@@ -506,8 +510,11 @@ func TestEnd(t *testing.T) {
 			t.Fatalf("failed to parse error response: %v", err)
 		}
 
-		if errorResponse["error"] != "Session not found" {
-			t.Errorf("expected error 'Session not found', got '%v'", errorResponse["error"])
+		if errorResponse["error"] != "SESSION_NOT_FOUND" {
+			t.Errorf("expected error code 'SESSION_NOT_FOUND', got '%v'", errorResponse["error"])
+		}
+		if errorResponse["details"] != "The specified session does not exist or has expired" {
+			t.Errorf("expected error details message, got '%v'", errorResponse["details"])
 		}
 	})
 }

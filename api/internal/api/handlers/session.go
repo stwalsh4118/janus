@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sean/janus/internal/api/response"
+	"github.com/sean/janus/internal/logger"
 	"github.com/sean/janus/internal/session"
 )
 
@@ -64,15 +65,14 @@ func (h *SessionHandler) Start(c *gin.Context) {
 	// Create session in manager
 	sess, err := h.sessionManager.CreateSession()
 	if err != nil {
-		log.Printf("Failed to create session: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to create session",
-			"details": err.Error(),
-		})
+		logger.Get().Error().Err(err).Msg("Failed to create session")
+		response.RespondWithError(c, http.StatusInternalServerError, response.ErrInternalServer, "Failed to create session")
 		return
 	}
 
-	log.Printf("Session %s created successfully (cursor chat will be created on first question)", sess.ID)
+	logger.Get().Info().
+		Str("session_id", sess.ID).
+		Msg("Session created successfully")
 
 	response := StartSessionResponse{
 		SessionID: sess.ID,
@@ -86,51 +86,59 @@ func (h *SessionHandler) Start(c *gin.Context) {
 func (h *SessionHandler) Ask(c *gin.Context) {
 	sessionID := c.Query("session_id")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "session_id query parameter is required",
-		})
+		response.RespondWithError(c, http.StatusBadRequest, response.ErrInvalidRequest, "session_id query parameter is required")
 		return
 	}
 
 	// Parse request body
 	var req AskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid request body",
-			"details": err.Error(),
-		})
+		response.RespondWithError(c, http.StatusBadRequest, response.ErrInvalidRequest, "Invalid request body: missing or malformed question field")
 		return
 	}
 
 	// Verify session exists
 	_, err := h.sessionManager.GetSession(sessionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":   "Session not found",
-			"details": err.Error(),
-		})
+		response.RespondWithError(c, http.StatusNotFound, response.ErrSessionNotFound, "The specified session does not exist or has expired")
 		return
 	}
 
-	// Ask question using cursor-agent command
-	answer, cursorChatID, err := h.sessionManager.AskQuestion(sessionID, req.Question, h.workspaceDir)
+	// Ask question using cursor-agent command (with context for timeout)
+	answer, cursorChatID, err := h.sessionManager.AskQuestion(c.Request.Context(), sessionID, req.Question, h.workspaceDir)
 	if err != nil {
-		log.Printf("Failed to ask question for session %s: %v", sessionID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get response from cursor-agent",
-			"details": err.Error(),
-		})
+		// Check if the error was due to context timeout
+		if c.Request.Context().Err() != nil {
+			logger.Get().Warn().
+				Str("session_id", sessionID).
+				Err(err).
+				Msg("Request timed out")
+			response.RespondWithError(c, http.StatusRequestTimeout, response.ErrTimeout, "Request to cursor-agent timed out")
+			return
+		}
+		logger.Get().Error().
+			Str("session_id", sessionID).
+			Err(err).
+			Msg("Failed to ask question")
+		response.RespondWithError(c, http.StatusInternalServerError, response.ErrProcessCommunication, "Failed to get response from cursor-agent")
 		return
 	}
 
 	// Update cursor chat ID if this was the first question
 	if err := h.sessionManager.UpdateCursorChatID(sessionID, cursorChatID); err != nil {
-		log.Printf("Warning: failed to update cursor chat ID for session %s: %v", sessionID, err)
+		logger.Get().Warn().
+			Str("session_id", sessionID).
+			Str("cursor_chat_id", cursorChatID).
+			Err(err).
+			Msg("Failed to update cursor chat ID")
 	}
 
 	// Update activity timestamp
 	if err := h.sessionManager.UpdateActivity(sessionID); err != nil {
-		log.Printf("Warning: failed to update activity for session %s: %v", sessionID, err)
+		logger.Get().Warn().
+			Str("session_id", sessionID).
+			Err(err).
+			Msg("Failed to update activity")
 	}
 
 	// Add to conversation log
@@ -149,11 +157,17 @@ func (h *SessionHandler) Ask(c *gin.Context) {
 	}
 
 	if err := h.sessionManager.AddToConversationLog(sessionID, messages); err != nil {
-		log.Printf("Warning: failed to add to conversation log for session %s: %v", sessionID, err)
+		logger.Get().Warn().
+			Str("session_id", sessionID).
+			Err(err).
+			Msg("Failed to add to conversation log")
 		// Don't fail the request, just log the warning
 	}
 
-	log.Printf("Session %s: Question processed successfully (cursor chat: %s)", sessionID, cursorChatID)
+	logger.Get().Info().
+		Str("session_id", sessionID).
+		Str("cursor_chat_id", cursorChatID).
+		Msg("Question processed successfully")
 
 	response := AskResponse{
 		Answer:    answer,
@@ -167,28 +181,20 @@ func (h *SessionHandler) Ask(c *gin.Context) {
 func (h *SessionHandler) Heartbeat(c *gin.Context) {
 	sessionID := c.Query("session_id")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "session_id query parameter is required",
-		})
+		response.RespondWithError(c, http.StatusBadRequest, response.ErrInvalidRequest, "session_id query parameter is required")
 		return
 	}
 
 	// Verify session exists
 	_, err := h.sessionManager.GetSession(sessionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":   "Session not found",
-			"details": err.Error(),
-		})
+		response.RespondWithError(c, http.StatusNotFound, response.ErrSessionNotFound, "The specified session does not exist or has expired")
 		return
 	}
 
 	// Update activity timestamp
 	if err := h.sessionManager.UpdateActivity(sessionID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to update session activity",
-			"details": err.Error(),
-		})
+		response.RespondWithError(c, http.StatusInternalServerError, response.ErrInternalServer, "Failed to update session activity")
 		return
 	}
 
@@ -196,14 +202,13 @@ func (h *SessionHandler) Heartbeat(c *gin.Context) {
 	sess, err := h.sessionManager.GetSession(sessionID)
 	if err != nil {
 		// Unlikely since we just updated it, but handle anyway
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to retrieve updated session",
-			"details": err.Error(),
-		})
+		response.RespondWithError(c, http.StatusInternalServerError, response.ErrInternalServer, "Failed to retrieve updated session")
 		return
 	}
 
-	log.Printf("Heartbeat received for session %s", sessionID)
+	logger.Get().Debug().
+		Str("session_id", sessionID).
+		Msg("Heartbeat received")
 
 	response := HeartbeatResponse{
 		Message:      "Heartbeat received",
@@ -218,32 +223,26 @@ func (h *SessionHandler) Heartbeat(c *gin.Context) {
 func (h *SessionHandler) End(c *gin.Context) {
 	sessionID := c.Query("session_id")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "session_id query parameter is required",
-		})
+		response.RespondWithError(c, http.StatusBadRequest, response.ErrInvalidRequest, "session_id query parameter is required")
 		return
 	}
 
 	// Verify session exists
 	_, err := h.sessionManager.GetSession(sessionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":   "Session not found",
-			"details": err.Error(),
-		})
+		response.RespondWithError(c, http.StatusNotFound, response.ErrSessionNotFound, "The specified session does not exist or has expired")
 		return
 	}
 
 	// Remove session from manager
 	if err := h.sessionManager.EndSession(sessionID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to end session",
-			"details": err.Error(),
-		})
+		response.RespondWithError(c, http.StatusInternalServerError, response.ErrInternalServer, "Failed to end session")
 		return
 	}
 
-	log.Printf("Session %s ended successfully", sessionID)
+	logger.Get().Info().
+		Str("session_id", sessionID).
+		Msg("Session ended successfully")
 
 	response := EndSessionResponse{
 		Message:   "Session ended successfully",
