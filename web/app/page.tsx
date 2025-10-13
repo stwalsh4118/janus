@@ -1,20 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { StatusIndicator } from "@/components/StatusIndicator";
 import { PushToTalk } from "@/components/PushToTalk";
+import { SpeechUnsupported } from "@/components/SpeechUnsupported";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiClient } from "@/lib/api-client";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import type { HealthResponse } from "@/lib/types";
 
 export default function Home() {
   const [status, setStatus] = useState<"connected" | "disconnected" | "connecting">("connecting");
   const [healthData, setHealthData] = useState<HealthResponse | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [transcript, setTranscript] = useState<string>("");
   const [response, setResponse] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [isSending, setIsSending] = useState<boolean>(false);
+
+  // Speech recognition hook
+  const {
+    isSupported,
+    isListening,
+    transcript,
+    interimTranscript,
+    error: speechError,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition();
+
+  // Use refs to always get the latest transcript values (avoid stale closures)
+  const transcriptRef = useRef<string>("");
+  const interimTranscriptRef = useRef<string>("");
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
+  
+  useEffect(() => {
+    interimTranscriptRef.current = interimTranscript;
+  }, [interimTranscript]);
 
   // Check backend health on mount
   useEffect(() => {
@@ -70,24 +97,100 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [sessionId]);
 
-  const handlePressToTalk = () => {
-    setTranscript("Recording... (stub - voice recognition will be added in PBI-4)");
-  };
-
-  const handleReleaseToTalk = async () => {
+  // Cleanup session on unmount or page unload
+  useEffect(() => {
     if (!sessionId) return;
 
-    const stubQuestion = "How does the authentication work in this project?";
-    setTranscript(`You asked: "${stubQuestion}"`);
-    
-    try {
-      const answer = await apiClient.ask(sessionId, stubQuestion);
-      setResponse(answer);
-    } catch (err) {
-      console.error("Failed to ask question:", err);
-      setError(err instanceof Error ? err.message : "Failed to get response");
+    const endSessionCleanup = async () => {
+      try {
+        await apiClient.endSession(sessionId);
+      } catch (err) {
+        console.error("Failed to end session:", err);
+      }
+    };
+
+    // Handle page unload (close tab, navigate away, refresh)
+    const handleBeforeUnload = () => {
+      // Use sendBeacon for reliable cleanup on page unload
+      // This is more reliable than async fetch during unload
+      const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/session/end?session_id=${encodeURIComponent(sessionId)}`;
+      
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(url);
+      } else {
+        // Fallback for browsers that don't support sendBeacon
+        // Note: This may not complete if the page unloads quickly
+        fetch(url, { method: "POST", keepalive: true }).catch(() => {
+          // Ignore errors during unload
+        });
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup when component unmounts (e.g., navigation in SPA)
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      endSessionCleanup();
+    };
+  }, [sessionId]);
+
+  const handleToggleTalk = async () => {
+    if (isListening) {
+      // Prevent duplicate sends
+      if (isSending) return;
+      
+      // Set sending state immediately to disable button
+      setIsSending(true);
+      
+      // Wait a bit to let speech recognition finalize the last words
+      // This gives the API time to process the tail end of speech
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Stop recording
+      stopListening();
+      
+      // Wait a tiny bit more for the stop event to process and final results to come in
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+      // NOW capture both final AND interim transcript using refs
+      // Refs give us the CURRENT values, not stale closure values
+      const questionToSend = (transcriptRef.current + interimTranscriptRef.current).trim();
+      
+      console.log("=== Speech Debug ===");
+      console.log("Final transcript:", transcriptRef.current);
+      console.log("Interim transcript:", interimTranscriptRef.current);
+      console.log("Combined (sending):", questionToSend);
+      console.log("===================");
+      
+      if (!sessionId || !questionToSend) {
+        // If no transcript, just reset
+        resetTranscript();
+        setIsSending(false);
+        return;
+      }
+
+      try {
+        setError(""); // Clear any previous errors
+        const answer = await apiClient.ask(sessionId, questionToSend);
+        setResponse(answer);
+        // Reset transcript after successful send
+        resetTranscript();
+      } catch (err) {
+        console.error("Failed to ask question:", err);
+        setError(err instanceof Error ? err.message : "Failed to get response");
+      } finally {
+        setIsSending(false);
+      }
+    } else {
+      // Start recording
+      resetTranscript();
+      startListening();
     }
   };
+
+  // Combined transcript for display (final + interim)
+  const displayTranscript = transcript + interimTranscript;
 
   return (
     <main className="min-h-screen bg-background p-4 md:p-8">
@@ -107,11 +210,14 @@ export default function Home() {
           activeSessions={healthData?.active_sessions}
         />
 
+        {/* Speech Unsupported Warning */}
+        {!isSupported && <SpeechUnsupported />}
+
         {/* Error Display */}
-        {error && (
+        {(error || speechError) && (
           <Card className="border-destructive">
             <CardContent className="pt-6">
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-sm text-destructive">{error || speechError}</p>
             </CardContent>
           </Card>
         )}
@@ -119,20 +225,25 @@ export default function Home() {
         {/* Push to Talk */}
         <div className="flex justify-center">
           <PushToTalk
-            disabled={status !== "connected" || !sessionId}
-            onPress={handlePressToTalk}
-            onRelease={handleReleaseToTalk}
+            disabled={status !== "connected" || !sessionId || !isSupported || isSending}
+            isRecording={isListening}
+            isSending={isSending}
+            onToggle={handleToggleTalk}
           />
         </div>
 
         {/* Transcript */}
-        {transcript && (
+        {displayTranscript && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Transcript</CardTitle>
+              <CardTitle className="text-lg">
+                {isListening ? "Listening..." : isSending ? "Sending..." : "Transcript"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{transcript}</p>
+              <p className="text-sm text-muted-foreground">
+                {displayTranscript}
+              </p>
             </CardContent>
           </Card>
         )}

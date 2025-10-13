@@ -1,37 +1,27 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff } from "lucide-react";
 import type { PushToTalkProps } from "@/lib/types";
 
-export function PushToTalk({ disabled, onPress, onRelease }: PushToTalkProps) {
-  const [isPressed, setIsPressed] = useState(false);
-
-  const handleMouseDown = () => {
+export function PushToTalk({ disabled, isRecording, isSending, onToggle }: PushToTalkProps) {
+  const handleClick = () => {
     if (disabled) return;
-    setIsPressed(true);
-    onPress?.();
+    onToggle();
   };
 
-  const handleMouseUp = () => {
-    if (disabled) return;
-    setIsPressed(false);
-    onRelease?.();
+  // Determine button text and helper text based on state
+  const getButtonText = () => {
+    if (isSending) return "Sending...";
+    if (disabled) return "Disabled";
+    if (isRecording) return "Tap to Stop";
+    return "Tap to Talk";
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
-    if (disabled) return;
-    setIsPressed(true);
-    onPress?.();
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    if (disabled) return;
-    setIsPressed(false);
-    onRelease?.();
+  const getHelperText = () => {
+    if (isSending) return "Waiting for response...";
+    if (disabled) return "Connect to backend to start";
+    return "Tap once to start recording, tap again to send";
   };
 
   return (
@@ -39,34 +29,28 @@ export function PushToTalk({ disabled, onPress, onRelease }: PushToTalkProps) {
       <Button
         size="lg"
         disabled={disabled}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        onClick={handleClick}
         className={`
           h-48 w-48 rounded-full transition-all duration-200
-          ${isPressed ? "scale-95 shadow-inner" : "scale-100 shadow-lg"}
+          ${isRecording ? "scale-95 shadow-inner" : "scale-100 shadow-lg"}
           ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         `}
-        variant={isPressed ? "secondary" : "default"}
+        variant={isRecording ? "secondary" : "default"}
       >
         <div className="flex flex-col items-center gap-2">
-          {isPressed ? (
+          {isRecording ? (
             <Mic className="h-16 w-16 animate-pulse" />
           ) : (
             <MicOff className="h-16 w-16" />
           )}
           <span className="text-sm font-medium">
-            {disabled ? "Disabled" : isPressed ? "Recording..." : "Hold to Talk"}
+            {getButtonText()}
           </span>
         </div>
       </Button>
       
       <p className="text-xs text-muted-foreground text-center max-w-xs">
-        {disabled
-          ? "Connect to backend to start"
-          : "Press and hold the button to record your question"}
+        {getHelperText()}
       </p>
     </div>
   );

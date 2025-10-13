@@ -39,8 +39,9 @@ export interface StatusIndicatorProps {
 
 export interface PushToTalkProps {
   disabled?: boolean;
-  onPress?: () => void;
-  onRelease?: () => void;
+  isRecording: boolean;
+  isSending?: boolean;
+  onToggle: () => void;
 }
 
 // State Types
