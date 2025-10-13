@@ -9,6 +9,7 @@ interface UseSpeechRecognitionReturn {
   startListening: () => void;
   stopListening: () => void;
   resetTranscript: () => void;
+  getCurrentTranscript: () => string;
 }
 
 export function useSpeechRecognition(): UseSpeechRecognitionReturn {
@@ -19,6 +20,19 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [error, setError] = useState<string | null>(null);
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  
+  // Refs to track latest values (avoid stale closures in async contexts)
+  const transcriptRef = useRef<string>('');
+  const interimTranscriptRef = useRef<string>('');
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
+  
+  useEffect(() => {
+    interimTranscriptRef.current = interimTranscript;
+  }, [interimTranscript]);
 
   useEffect(() => {
     // Check for browser support
@@ -109,6 +123,12 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     setError(null);
   }, []);
 
+  // Get the complete current transcript (final + interim)
+  // This always returns the latest values, safe to use in async contexts
+  const getCurrentTranscript = useCallback(() => {
+    return (transcriptRef.current + interimTranscriptRef.current).trim();
+  }, []);
+
   return {
     isSupported,
     isListening,
@@ -118,6 +138,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     startListening,
     stopListening,
     resetTranscript,
+    getCurrentTranscript,
   };
 }
 

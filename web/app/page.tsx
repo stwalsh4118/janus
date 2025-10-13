@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { StatusIndicator } from "@/components/StatusIndicator";
 import { PushToTalk } from "@/components/PushToTalk";
 import { SpeechUnsupported } from "@/components/SpeechUnsupported";
@@ -28,20 +28,8 @@ export default function Home() {
     startListening,
     stopListening,
     resetTranscript,
+    getCurrentTranscript,
   } = useSpeechRecognition();
-
-  // Use refs to always get the latest transcript values (avoid stale closures)
-  const transcriptRef = useRef<string>("");
-  const interimTranscriptRef = useRef<string>("");
-  
-  // Keep refs in sync with state
-  useEffect(() => {
-    transcriptRef.current = transcript;
-  }, [transcript]);
-  
-  useEffect(() => {
-    interimTranscriptRef.current = interimTranscript;
-  }, [interimTranscript]);
 
   // Check backend health on mount
   useEffect(() => {
@@ -140,26 +128,17 @@ export default function Home() {
       // Prevent duplicate sends
       if (isSending) return;
       
-      // Set sending state immediately to disable button
       setIsSending(true);
       
-      // Wait a bit to let speech recognition finalize the last words
-      // This gives the API time to process the tail end of speech
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Stop recording
       stopListening();
       
-      // Wait a tiny bit more for the stop event to process and final results to come in
       await new Promise(resolve => setTimeout(resolve, 150));
       
-      // NOW capture both final AND interim transcript using refs
-      // Refs give us the CURRENT values, not stale closure values
-      const questionToSend = (transcriptRef.current + interimTranscriptRef.current).trim();
+      const questionToSend = getCurrentTranscript();
       
       console.log("=== Speech Debug ===");
-      console.log("Final transcript:", transcriptRef.current);
-      console.log("Interim transcript:", interimTranscriptRef.current);
       console.log("Combined (sending):", questionToSend);
       console.log("===================");
       
