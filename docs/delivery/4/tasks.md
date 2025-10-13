@@ -9,7 +9,7 @@ This document lists all tasks associated with PBI 4.
 | Task ID | Name | Status | Description |
 | :------ | :--------------------------------------- | :------- | :--------------------------------- |
 | 4-1 | [Add PWA support and Web Speech API types](./4-1.md) | Done | Add PWA manifest, mobile meta tags, and Web Speech API type definitions |
-| 4-2 | [Implement Speech Recognition integration](./4-2.md) | Proposed | Create useSpeechRecognition hook for continuous voice input with real-time transcription |
+| 4-2 | [Implement Speech Recognition integration](./4-2.md) | Done | Create useSpeechRecognition hook for continuous voice input with real-time transcription |
 | 4-3 | [Implement Speech Synthesis integration](./4-3.md) | Proposed | Create useSpeechSynthesis hook for automatic text-to-speech with interruption support |
 | 4-4 | [Enhance PushToTalk component with improved UX](./4-4.md) | Proposed | Upgrade to 200x200px button with clear visual states and haptic feedback |
 | 4-5 | [Implement mobile optimizations and accessibility](./4-5.md) | Proposed | Add wake lock, prevent zoom, handle orientation changes, and visibility API |
