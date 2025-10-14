@@ -55,7 +55,16 @@ export interface PushToTalkProps {
 
 // State Types
 
-export interface AppState {
+export type AppState = "idle" | "recording" | "processing" | "speaking" | "error";
+
+export interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+}
+
+export interface GlobalAppState {
   sessionId: string | null;
   isConnected: boolean;
   backendStatus: HealthResponse | null;
