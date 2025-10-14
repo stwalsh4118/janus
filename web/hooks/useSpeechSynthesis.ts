@@ -16,6 +16,7 @@ interface UseSpeechSynthesisReturn {
 }
 
 const STORAGE_KEY = 'janus-tts-provider';
+const MAX_CACHE_SIZE = 10; // Cache audio for last 10 messages
 
 export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
   const [isSupported] = useState(true); // Always supported (browser fallback)
@@ -29,6 +30,8 @@ export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
+  const audioCacheRef = useRef<Map<string, Blob>>(new Map());
+  const shouldPlayRef = useRef<boolean>(true);
 
   // Initialize browser TTS
   useEffect(() => {
@@ -89,6 +92,11 @@ export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
 
   const cleanupAudio = useCallback(() => {
     if (audioRef.current) {
+      // Remove event listeners before cleanup to prevent error events
+      audioRef.current.onplay = null;
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      
       audioRef.current.pause();
       audioRef.current.src = '';
       audioRef.current = null;
@@ -109,11 +117,41 @@ export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
   const speakWithKokoro = useCallback(async (text: string) => {
     cleanupAudio();
     cleanupBrowserTTS();
-    setIsGenerating(true);
     setCurrentProvider('kokoro');
+    shouldPlayRef.current = true;
 
     try {
-      const audioBlob = await apiClient.generateSpeech(text);
+      // Check cache first
+      let audioBlob = audioCacheRef.current.get(text);
+      
+      if (!audioBlob) {
+        // Not in cache, generate new audio
+        setIsGenerating(true);
+        audioBlob = await apiClient.generateSpeech(text);
+        
+        // Check if stop was called during generation
+        if (!shouldPlayRef.current) {
+          setIsGenerating(false);
+          return;
+        }
+        
+        // Add to cache and manage cache size
+        audioCacheRef.current.set(text, audioBlob);
+        if (audioCacheRef.current.size > MAX_CACHE_SIZE) {
+          // Remove oldest entry (first entry in the map)
+          const firstKey = audioCacheRef.current.keys().next().value;
+          if (firstKey) {
+            audioCacheRef.current.delete(firstKey);
+          }
+        }
+      }
+      
+      setIsGenerating(false);
+      
+      // Check again if stop was called
+      if (!shouldPlayRef.current) {
+        return;
+      }
       
       const audioUrl = URL.createObjectURL(audioBlob);
       audioUrlRef.current = audioUrl;
@@ -122,7 +160,6 @@ export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
       audioRef.current = audio;
 
       audio.onplay = () => {
-        setIsGenerating(false);
         setIsSpeaking(true);
       };
 
@@ -134,7 +171,6 @@ export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
       audio.onerror = (event) => {
         console.error('Kokoro audio playback error:', event);
         setIsSpeaking(false);
-        setIsGenerating(false);
         cleanupAudio();
       };
 
@@ -223,6 +259,7 @@ export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
   }, [preferredProvider, kokoroAvailable, speakWithKokoro, speakWithBrowser]);
 
   const stop = useCallback(() => {
+    shouldPlayRef.current = false;
     cleanupAudio();
     cleanupBrowserTTS();
     setIsSpeaking(false);
