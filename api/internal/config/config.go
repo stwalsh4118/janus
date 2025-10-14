@@ -18,6 +18,11 @@ type Config struct {
 	GitRecentDays         int
 	CORSAllowedOrigins    string
 	WorkspaceDir          string
+	KokoroTTSPath         string
+	KokoroTTSModelPath    string
+	KokoroTTSVoicesPath   string
+	KokoroTTSVoice        string
+	KokoroTTSSpeed        float64
 }
 
 const (
@@ -37,6 +42,16 @@ const (
 	DefaultCORSAllowedOrigins = "http://localhost:3001"
 	// DefaultWorkspaceDir is the default workspace directory for cursor-agent
 	DefaultWorkspaceDir = "."
+	// DefaultKokoroTTSPath is the default path to kokoro-tts executable (WSL)
+	DefaultKokoroTTSPath = "/home/sean/kokoro-env/bin/kokoro-tts"
+	// DefaultKokoroTTSModelPath is the default path to the model file
+	DefaultKokoroTTSModelPath = "/home/sean/kokoro-v1.0.onnx"
+	// DefaultKokoroTTSVoicesPath is the default path to the voices file
+	DefaultKokoroTTSVoicesPath = "/home/sean/voices-v1.0.bin"
+	// DefaultKokoroTTSVoice is the default voice for TTS
+	DefaultKokoroTTSVoice = "af_sarah"
+	// DefaultKokoroTTSSpeed is the default speech speed
+	DefaultKokoroTTSSpeed = 1
 )
 
 // Load reads configuration from environment variables
@@ -53,6 +68,11 @@ func Load() (*Config, error) {
 		GitRecentDays:         getEnvAsInt("GIT_RECENT_DAYS", DefaultGitRecentDays),
 		CORSAllowedOrigins:    getEnv("CORS_ALLOWED_ORIGINS", DefaultCORSAllowedOrigins),
 		WorkspaceDir:          getEnv("WORKSPACE_DIR", DefaultWorkspaceDir),
+		KokoroTTSPath:         getEnv("KOKORO_TTS_PATH", DefaultKokoroTTSPath),
+		KokoroTTSModelPath:    getEnv("KOKORO_TTS_MODEL_PATH", DefaultKokoroTTSModelPath),
+		KokoroTTSVoicesPath:   getEnv("KOKORO_TTS_VOICES_PATH", DefaultKokoroTTSVoicesPath),
+		KokoroTTSVoice:        getEnv("KOKORO_TTS_VOICE", DefaultKokoroTTSVoice),
+		KokoroTTSSpeed:        getEnvAsFloat("KOKORO_TTS_SPEED", DefaultKokoroTTSSpeed),
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -91,6 +111,21 @@ func getEnvAsInt(key string, defaultValue int) int {
 	}
 
 	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+
+	return value
+}
+
+// getEnvAsFloat reads an environment variable as float64 or returns a default value
+func getEnvAsFloat(key string, defaultValue float64) float64 {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue
+	}
+
+	value, err := strconv.ParseFloat(valueStr, 64)
 	if err != nil {
 		return defaultValue
 	}
