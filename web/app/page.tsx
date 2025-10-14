@@ -5,9 +5,13 @@ import { StatusIndicator } from "@/components/StatusIndicator";
 import { PushToTalk } from "@/components/PushToTalk";
 import { SpeechUnsupported } from "@/components/SpeechUnsupported";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Volume2, VolumeX, Settings } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import type { HealthResponse } from "@/lib/types";
 
 export default function Home() {
@@ -17,6 +21,7 @@ export default function Home() {
   const [response, setResponse] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isSending, setIsSending] = useState<boolean>(false);
+  const [debugText, setDebugText] = useState<string>("");
 
   // Speech recognition hook
   const {
@@ -30,6 +35,18 @@ export default function Home() {
     resetTranscript,
     getCurrentTranscript,
   } = useSpeechRecognition();
+
+  // Speech synthesis hook
+  const {
+    isSupported: ttsSupported,
+    isSpeaking,
+    isGenerating: isGeneratingAudio,
+    currentProvider,
+    preferredProvider,
+    setPreferredProvider,
+    speak,
+    stop: stopSpeaking,
+  } = useSpeechSynthesis();
 
   // Check backend health on mount
   useEffect(() => {
@@ -153,6 +170,12 @@ export default function Home() {
         setError(""); // Clear any previous errors
         const answer = await apiClient.ask(sessionId, questionToSend);
         setResponse(answer);
+        
+        // Auto-play response with TTS
+        if (ttsSupported && answer) {
+          speak(answer);
+        }
+        
         // Reset transcript after successful send
         resetTranscript();
       } catch (err) {
@@ -189,8 +212,114 @@ export default function Home() {
           activeSessions={healthData?.active_sessions}
         />
 
+        {/* TTS Provider Status */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">
+                    TTS: {preferredProvider === 'auto' ? 'Auto' : preferredProvider === 'kokoro' ? 'Kokoro' : 'Browser'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {preferredProvider === 'auto' && 'Will use Kokoro if available, fallback to browser'}
+                    {preferredProvider === 'kokoro' && 'Kokoro only mode'}
+                    {preferredProvider === 'browser' && 'Browser only mode'}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const providers: Array<'auto' | 'kokoro' | 'browser'> = ['auto', 'kokoro', 'browser'];
+                  const currentIndex = providers.indexOf(preferredProvider);
+                  const nextProvider = providers[(currentIndex + 1) % providers.length];
+                  setPreferredProvider(nextProvider);
+                }}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Change
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Speech Unsupported Warning */}
         {!isSupported && <SpeechUnsupported />}
+
+        {/* Debug Text Input */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Debug: Text Input (Silent Mode)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="Type your question silently..."
+                value={debugText}
+                onChange={(e) => setDebugText(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter' && debugText.trim() && !isSending && sessionId) {
+                    const question = debugText.trim();
+                    setDebugText("");
+                    setIsSending(true);
+                    
+                    try {
+                      setError("");
+                      const answer = await apiClient.ask(sessionId, question);
+                      setResponse(answer);
+                      
+                      // Auto-play response
+                      if (ttsSupported && answer) {
+                        await speak(answer);
+                      }
+                    } catch (err) {
+                      console.error("Failed to ask question:", err);
+                      setError(err instanceof Error ? err.message : "Failed to get response");
+                    } finally {
+                      setIsSending(false);
+                    }
+                  }
+                }}
+                disabled={isSending || !sessionId}
+              />
+              <Button
+                onClick={async () => {
+                  if (debugText.trim() && !isSending && sessionId) {
+                    const question = debugText.trim();
+                    setDebugText("");
+                    setIsSending(true);
+                    
+                    try {
+                      setError("");
+                      const answer = await apiClient.ask(sessionId, question);
+                      setResponse(answer);
+                      
+                      // Auto-play response
+                      if (ttsSupported && answer) {
+                        await speak(answer);
+                      }
+                    } catch (err) {
+                      console.error("Failed to ask question:", err);
+                      setError(err instanceof Error ? err.message : "Failed to get response");
+                    } finally {
+                      setIsSending(false);
+                    }
+                  }
+                }}
+                disabled={!debugText.trim() || isSending || !sessionId}
+              >
+                {isSending ? "Sending..." : "Ask"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Type your question and press Enter to ask without using voice
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Error Display */}
         {(error || speechError) && (
@@ -231,12 +360,55 @@ export default function Home() {
         {response && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Response</CardTitle>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg">
+                    {isGeneratingAudio ? "Generating audio..." : "Response"}
+                  </CardTitle>
+                  <span className="text-xs text-muted-foreground">
+                    ({currentProvider === 'kokoro' ? 'Kokoro AI' : 'Browser'} TTS)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(isSpeaking || isGeneratingAudio) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={stopSpeaking}
+                      disabled={isGeneratingAudio}
+                    >
+                      <VolumeX className="h-4 w-4 mr-2" />
+                      {isGeneratingAudio ? "Generating..." : "Stop"}
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const providers: Array<'auto' | 'kokoro' | 'browser'> = ['auto', 'kokoro', 'browser'];
+                      const currentIndex = providers.indexOf(preferredProvider);
+                      const nextProvider = providers[(currentIndex + 1) % providers.length];
+                      setPreferredProvider(nextProvider);
+                    }}
+                    title="Toggle TTS Provider"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Mode: {preferredProvider === 'auto' ? 'Auto (Kokoro preferred)' : preferredProvider === 'kokoro' ? 'Kokoro only' : 'Browser only'}
+              </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[200px] w-full rounded-md">
-                <p className="text-sm whitespace-pre-wrap">{response}</p>
-              </ScrollArea>
+              <div className="flex items-start gap-3">
+                {(isSpeaking || isGeneratingAudio) && (
+                  <Volume2 className={`h-5 w-5 text-primary ${isSpeaking ? 'animate-pulse' : 'animate-spin'}`} />
+                )}
+                <ScrollArea className="h-[200px] w-full rounded-md">
+                  <p className="text-sm whitespace-pre-wrap">{response}</p>
+                </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         )}
