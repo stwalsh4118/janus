@@ -6,8 +6,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -25,6 +24,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -60,6 +62,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -81,22 +84,25 @@
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.163 0 0);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.588 0.207 255.285);
+  --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.645 0.176 142.5);
+  --success-foreground: oklch(0.985 0 0);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -108,8 +114,8 @@
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
 }
 
 @layer base {
@@ -119,4 +125,75 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Custom state backgrounds for aura effects */
+.bg-idle {
+  background: oklch(0.145 0 0);
+}
+
+.bg-recording {
+  background: linear-gradient(to bottom, oklch(0.145 0 0), oklch(0.163 0.02 27.325));
+}
+
+.bg-processing {
+  background: linear-gradient(to bottom, oklch(0.145 0 0), oklch(0.163 0.02 255.285));
+}
+
+.bg-speaking {
+  background: linear-gradient(to bottom, oklch(0.145 0 0), oklch(0.163 0.02 142.5));
+}
+
+.bg-error {
+  background: linear-gradient(to bottom, oklch(0.145 0 0), oklch(0.18 0.03 27.325));
+}
+
+/* Aura shadow effects */
+.shadow-aura-idle {
+  box-shadow: inset 0 0 100px 20px rgba(59, 130, 246, 0.2);
+}
+
+.shadow-aura-recording {
+  box-shadow: inset 0 0 100px 30px rgba(239, 68, 68, 0.5);
+}
+
+.shadow-aura-processing {
+  box-shadow: inset 0 0 100px 25px rgba(59, 130, 246, 0.4);
+}
+
+.shadow-aura-speaking {
+  box-shadow: inset 0 0 100px 25px rgba(34, 197, 94, 0.4);
+}
+
+.shadow-aura-error {
+  box-shadow: inset 0 0 100px 30px rgba(239, 68, 68, 0.6);
+}
+
+/* Animations */
+@keyframes pulse-aura {
+  0%,
+  100% {
+    box-shadow: inset 0 0 100px 30px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: inset 0 0 120px 40px rgba(239, 68, 68, 0.6);
+  }
+}
+
+@keyframes pulse-aura-gentle {
+  0%,
+  100% {
+    box-shadow: inset 0 0 100px 25px rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    box-shadow: inset 0 0 110px 30px rgba(34, 197, 94, 0.5);
+  }
+}
+
+.animate-pulse-aura {
+  animation: pulse-aura 2s ease-in-out infinite;
+}
+
+.animate-pulse-aura-gentle {
+  animation: pulse-aura-gentle 2s ease-in-out infinite;
 }
