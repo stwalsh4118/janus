@@ -138,3 +138,6 @@ playwright-report/
 .janus/conversation-summaries/*.md
 !.janus/conversation-summaries/.gitkeep
 
+/docs/design/v0/
+
+
