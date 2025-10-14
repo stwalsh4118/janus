@@ -3,6 +3,7 @@ import type {
   StartSessionResponse,
   AskRequest,
   AskResponse,
+  TTSHealthResponse,
 } from "./types";
 
 export class JanusApiClient {
@@ -104,6 +105,39 @@ export class JanusApiClient {
     if (!response.ok) {
       throw new Error(`Failed to end session: ${response.statusText}`);
     }
+  }
+
+  /**
+   * Check if server-side TTS (Kokoro) is available
+   */
+  async checkTTSHealth(): Promise<TTSHealthResponse> {
+    const response = await fetch(`${this.baseUrl}/api/tts/health`);
+    
+    if (!response.ok) {
+      throw new Error(`TTS health check failed: ${response.statusText}`);
+    }
+    
+    return response.json();
+  }
+
+  /**
+   * Generate speech audio from text using Kokoro TTS
+   */
+  async generateSpeech(text: string): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/api/tts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to generate speech: ${errorText || response.statusText}`);
+    }
+
+    return response.blob();
   }
 }
 

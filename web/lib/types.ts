@@ -29,6 +29,15 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface TTSHealthResponse {
+  available: boolean;
+  provider: "browser" | "kokoro";
+  voice?: string;
+  message?: string;
+}
+
+export type TTSProvider = "browser" | "kokoro" | "auto";
+
 // Component Props Types
 
 export interface StatusIndicatorProps {
