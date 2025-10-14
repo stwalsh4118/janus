@@ -1,14 +1,9 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Geist } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
 });
 
@@ -17,11 +12,12 @@ export const metadata: Metadata = {
   description: "Voice-enabled interface for asking AI coding agents questions about your codebase hands-free",
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({
@@ -30,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`dark ${geist.variable} antialiased`}>
       <head>
         {/* PWA Manifest */}
         <link rel="manifest" href="/manifest.json" />
@@ -41,7 +37,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         
         {/* Theme Colors */}
-        <meta name="theme-color" content="#000000" />
         <meta name="apple-mobile-web-app-title" content="Janus" />
         
         {/* Icons */}
@@ -51,9 +46,7 @@ export default function RootLayout({
         {/* Disable phone number detection */}
         <meta name="format-detection" content="telephone=no" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="font-sans">
         {children}
       </body>
     </html>
