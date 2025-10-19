@@ -32,6 +32,7 @@ func SetupRouter(cfg *config.Config, sessionManager session.Manager) *gin.Engine
 	healthHandler := handlers.NewHealthHandler(sessionManager)
 	sessionHandler := handlers.NewSessionHandler(sessionManager, cfg.WorkspaceDir)
 	ttsHandler := handlers.NewTTSHandler(cfg)
+	transcribeHandler := handlers.NewTranscribeHandler(cfg)
 
 	// API routes
 	api := router.Group("/api")
@@ -48,6 +49,9 @@ func SetupRouter(cfg *config.Config, sessionManager session.Manager) *gin.Engine
 		// Text-to-speech
 		api.GET("/tts/health", ttsHandler.HealthCheck)
 		api.POST("/tts", ttsHandler.Generate)
+
+		// Speech-to-text
+		api.POST("/transcribe", transcribeHandler.Transcribe)
 	}
 
 	// Log registered routes

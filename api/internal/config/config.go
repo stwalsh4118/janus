@@ -23,6 +23,8 @@ type Config struct {
 	KokoroTTSVoicesPath   string
 	KokoroTTSVoice        string
 	KokoroTTSSpeed        float64
+	WhisperPath           string
+	WhisperModel          string
 }
 
 const (
@@ -39,7 +41,8 @@ const (
 	// DefaultGitRecentDays is the default number of days for recent files
 	DefaultGitRecentDays = 3
 	// DefaultCORSAllowedOrigins is the default CORS allowed origins for development
-	DefaultCORSAllowedOrigins = "http://localhost:3001"
+	// Use "*" to allow all origins (useful for development with mobile/Tailscale)
+	DefaultCORSAllowedOrigins = "*"
 	// DefaultWorkspaceDir is the default workspace directory for cursor-agent
 	DefaultWorkspaceDir = "."
 	// DefaultKokoroTTSPath is the default path to kokoro-tts executable (WSL)
@@ -52,6 +55,10 @@ const (
 	DefaultKokoroTTSVoice = "af_sarah"
 	// DefaultKokoroTTSSpeed is the default speech speed
 	DefaultKokoroTTSSpeed = 1
+	// DefaultWhisperPath is the default path to whisper executable
+	DefaultWhisperPath = "/home/sean/whisper-local/.venv/bin/whisper"
+	// DefaultWhisperModel is the default Whisper model to use
+	DefaultWhisperModel = "base"
 )
 
 // Load reads configuration from environment variables
@@ -73,6 +80,8 @@ func Load() (*Config, error) {
 		KokoroTTSVoicesPath:   getEnv("KOKORO_TTS_VOICES_PATH", DefaultKokoroTTSVoicesPath),
 		KokoroTTSVoice:        getEnv("KOKORO_TTS_VOICE", DefaultKokoroTTSVoice),
 		KokoroTTSSpeed:        getEnvAsFloat("KOKORO_TTS_SPEED", DefaultKokoroTTSSpeed),
+		WhisperPath:           getEnv("WHISPER_PATH", DefaultWhisperPath),
+		WhisperModel:          getEnv("WHISPER_MODEL", DefaultWhisperModel),
 	}
 
 	if err := cfg.Validate(); err != nil {
