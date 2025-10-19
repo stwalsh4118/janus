@@ -139,9 +139,34 @@ export class JanusApiClient {
 
     return response.blob();
   }
+
+  /**
+   * Transcribe audio to text using Whisper
+   */
+  async transcribe(audioBlob: Blob): Promise<string> {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "recording.webm");
+
+    const response = await fetch(`${this.baseUrl}/api/transcribe`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Transcription failed: ${errorText || response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.text;
+  }
 }
 
 // Create a singleton instance
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// Use empty string for relative URLs (same origin) when using Tailscale path routing
+// Or set NEXT_PUBLIC_API_URL for separate backend
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+console.log('[API Client] Using API URL:', apiUrl || '(relative/same origin)');
+console.log('[API Client] Environment variable:', process.env.NEXT_PUBLIC_API_URL);
 export const apiClient = new JanusApiClient(apiUrl);
 
