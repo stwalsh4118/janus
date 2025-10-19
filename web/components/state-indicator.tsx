@@ -6,9 +6,11 @@ import type { AppState } from "@/lib/types";
 interface StateIndicatorProps {
   state: AppState;
   error?: string | null;
+  speechSupported?: boolean;
+  speechError?: string | null;
 }
 
-export function StateIndicator({ state, error }: StateIndicatorProps) {
+export function StateIndicator({ state, error, speechSupported = true, speechError }: StateIndicatorProps) {
   const getIndicatorContent = () => {
     switch (state) {
       case "recording":
@@ -21,7 +23,7 @@ export function StateIndicator({ state, error }: StateIndicatorProps) {
         return {
           icon: <Loader2 className="h-[120px] w-[120px] animate-spin text-primary" />,
           label: "Processing...",
-          helper: "Waiting for response...",
+          helper: "Transcribing and getting response...",
         };
       case "speaking":
         return {
@@ -37,6 +39,14 @@ export function StateIndicator({ state, error }: StateIndicatorProps) {
         };
       case "idle":
       default:
+        // Show different message if speech is not supported
+        if (!speechSupported || speechError) {
+          return {
+            icon: <AlertCircle className="h-[120px] w-[120px] text-yellow-500" />,
+            label: "Voice Input Unavailable",
+            helper: "Voice requires HTTPS. Open Debug Panel (⚙️) to use text input instead",
+          };
+        }
         return {
           icon: <MicOff className="h-[120px] w-[120px] text-muted-foreground" />,
           label: "Tap Anywhere to Start",

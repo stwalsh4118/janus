@@ -6,11 +6,21 @@ import { ConversationHistory } from "@/components/conversation-history";
 import { StateIndicator } from "@/components/state-indicator";
 import { DebugPanel } from "@/components/debug-panel";
 import { apiClient } from "@/lib/api-client";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import { generateUUID } from "@/lib/uuid";
 import type { AppState, Message, HealthResponse } from "@/lib/types";
 
 export default function Home() {
+  // Load eruda mobile console for debugging on phone
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('eruda').then(eruda => {
+        eruda.default.init();
+        console.log('[Eruda] Mobile console initialized - tap the console icon to view logs');
+      });
+    }
+  }, []);
   const [state, setState] = useState<AppState>("idle");
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -22,18 +32,16 @@ export default function Home() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Speech recognition hook
+  // Audio recorder hook (replaces speech recognition)
   const {
     isSupported,
-    isListening,
-    transcript,
-    interimTranscript,
-    error: speechError,
-    startListening,
-    stopListening,
-    resetTranscript,
-    getCurrentTranscript,
-  } = useSpeechRecognition();
+    isRecording,
+    isTranscribing,
+    error: recordingError,
+    startRecording: startAudioRecording,
+    stopRecording: stopAudioRecording,
+    resetRecording,
+  } = useAudioRecorder();
 
   // Speech synthesis hook
   const {
@@ -45,10 +53,10 @@ export default function Home() {
     setPreferredProvider,
     speak,
     stop: stopSpeaking,
+    unlockAudio,
   } = useSpeechSynthesis();
 
-  // Combined transcript for display (final + interim)
-  const displayTranscript = transcript + interimTranscript;
+  // No transcript display during recording (server-side transcription)
 
   // Check backend health on mount
   useEffect(() => {
@@ -119,7 +127,7 @@ export default function Home() {
     // Handle page unload (close tab, navigate away, refresh)
     const handleBeforeUnload = () => {
       // Use sendBeacon for reliable cleanup on page unload
-      const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/session/end?session_id=${encodeURIComponent(sessionId)}`;
+      const url = `/api/session/end?session_id=${encodeURIComponent(sessionId)}`;
 
       if (navigator.sendBeacon) {
         navigator.sendBeacon(url);
@@ -140,25 +148,28 @@ export default function Home() {
     };
   }, [sessionId]);
 
-  // Update error state based on speech error
+  // Update error state based on recording error - but don't block the entire UI
   useEffect(() => {
-    if (speechError && state !== "error") {
-      setError(speechError);
-      setState("error");
+    if (recordingError) {
+      console.warn('Audio recording error:', recordingError);
+      // Don't set the global error state - just log it
+      // The user can still use the debug panel for text input
     }
-  }, [speechError, state]);
+  }, [recordingError]);
 
-  // Update state based on speech and TTS status
+  // Update state based on audio recording, transcription, and TTS status
   useEffect(() => {
     if (isSpeaking || isGeneratingAudio) {
       setState("speaking");
-    } else if (isListening) {
+    } else if (isRecording) {
       setState("recording");
-    } else if (state === "speaking" || state === "recording") {
-      // Only reset to idle if we were speaking or recording
+    } else if (isTranscribing) {
+      setState("processing");
+    } else if (state === "speaking" || state === "recording" || state === "processing") {
+      // Only reset to idle if we were in an active state
       setState("idle");
     }
-  }, [isSpeaking, isGeneratingAudio, isListening, state]);
+  }, [isSpeaking, isGeneratingAudio, isRecording, isTranscribing, state]);
 
   const processQuestion = useCallback(
     async (question: string) => {
@@ -171,7 +182,7 @@ export default function Home() {
 
         // Add user message
         const userMessage: Message = {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           role: "user",
           content: question,
           timestamp: new Date(),
@@ -183,7 +194,7 @@ export default function Home() {
 
         // Add assistant message
         const assistantMessage: Message = {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           role: "assistant",
           content: answer,
           timestamp: new Date(),
@@ -192,8 +203,17 @@ export default function Home() {
 
         // Auto-play response with TTS
         if (ttsSupported && answer) {
-          await speak(answer);
+          console.log('[TTS] Attempting to speak response...');
+          try {
+            await speak(answer);
+            console.log('[TTS] Speak completed');
+          } catch (speakErr) {
+            console.warn('[TTS] Autoplay blocked (expected on mobile):', speakErr);
+            // Set to idle so user can interact
+            setState("idle");
+          }
         } else {
+          console.log('[TTS] TTS not supported or no answer, setting idle');
           setState("idle");
         }
       } catch (err) {
@@ -207,56 +227,69 @@ export default function Home() {
 
   const handlePlayMessage = useCallback(
     async (content: string) => {
-      if (state === "speaking") {
+      // If already speaking, stop and don't restart
+      // This prevents race conditions from rapid clicks
+      if (state === "speaking" || isSpeaking) {
+        console.log('[PlayMessage] Already speaking, stopping instead');
         stopSpeaking();
+        return;
       }
+      
+      console.log('[PlayMessage] Starting playback');
       await speak(content);
     },
-    [state, speak, stopSpeaking]
+    [state, isSpeaking, speak, stopSpeaking]
   );
 
   const startRecording = useCallback(() => {
     if (!isSupported) {
-      setError("Speech recognition is not supported in your browser");
-      setState("error");
+      console.warn("Audio recording is not supported in this browser/context");
+      // Don't enter error state - user can still use debug panel
       return;
     }
 
-    resetTranscript();
-    startListening();
+    // Unlock audio on first user interaction (for Safari autoplay)
+    unlockAudio();
+
+    resetRecording();
+    startAudioRecording();
     setState("recording");
     setError(null);
-  }, [isSupported, resetTranscript, startListening]);
+  }, [isSupported, resetRecording, startAudioRecording, unlockAudio]);
 
   const stopRecording = useCallback(async () => {
-    stopListening();
+    try {
+      setState("processing");
+      
+      // Stop recording and get transcription from server
+      const transcribedText = await stopAudioRecording();
+      
+      if (!transcribedText) {
+        console.warn("No transcription received");
+        setState("idle");
+        return;
+      }
 
-    // Wait a bit for final transcript
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const questionToSend = getCurrentTranscript();
-
-    if (!questionToSend) {
-      resetTranscript();
-      setState("idle");
-      return;
+      // Process the transcribed question
+      await processQuestion(transcribedText);
+    } catch (err) {
+      console.error("Failed to process recording:", err);
+      setError(err instanceof Error ? err.message : "Failed to process recording");
+      setState("error");
     }
-
-    // Process the question
-    await processQuestion(questionToSend);
-
-    // Reset transcript after successful send
-    resetTranscript();
-  }, [stopListening, getCurrentTranscript, resetTranscript, processQuestion]);
+  }, [stopAudioRecording, processQuestion]);
 
   const handleDebugSubmit = useCallback(async () => {
     if (!debugText.trim() || !sessionId) return;
+
+    // Unlock audio on first user interaction (for Safari autoplay)
+    unlockAudio();
 
     const question = debugText.trim();
     setDebugText("");
 
     await processQuestion(question);
-  }, [debugText, sessionId, processQuestion]);
+  }, [debugText, sessionId, processQuestion, unlockAudio]);
 
   // Full-screen interaction handlers
   useEffect(() => {
@@ -271,7 +304,10 @@ export default function Home() {
       }
 
       if (state === "idle") {
-        startRecording();
+        // Only try to start recording if speech is supported
+        if (isSupported) {
+          startRecording();
+        }
       } else if (state === "recording") {
         stopRecording();
       } else if (state === "speaking") {
@@ -340,12 +376,18 @@ export default function Home() {
 
         <ConversationHistory
           messages={messages}
-          currentTranscript={displayTranscript}
+          currentTranscript=""
           isRecording={state === "recording"}
           onPlayMessage={handlePlayMessage}
+          speechSupported={isSupported}
         />
 
-        <StateIndicator state={state} error={error} />
+        <StateIndicator 
+          state={state} 
+          error={error} 
+          speechSupported={isSupported}
+          speechError={recordingError}
+        />
       </div>
     </div>
   );

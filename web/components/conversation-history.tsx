@@ -11,6 +11,7 @@ interface ConversationHistoryProps {
   currentTranscript: string;
   isRecording: boolean;
   onPlayMessage: (content: string) => void;
+  speechSupported?: boolean;
 }
 
 export function ConversationHistory({
@@ -18,6 +19,7 @@ export function ConversationHistory({
   currentTranscript,
   isRecording,
   onPlayMessage,
+  speechSupported = true,
 }: ConversationHistoryProps) {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +39,11 @@ export function ConversationHistory({
           <div className="flex flex-col gap-6 p-4">
           {messages.length === 0 && !currentTranscript && (
             <div className="flex h-full items-center justify-center py-20">
-              <p className="text-center text-sm text-muted-foreground">Tap anywhere to ask a question</p>
+              <p className="text-center text-sm text-muted-foreground">
+                {speechSupported 
+                  ? "Tap anywhere to ask a question" 
+                  : "Open Debug Panel (⚙️) to type your question"}
+              </p>
             </div>
           )}
 
