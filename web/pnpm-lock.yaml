@@ -162,6 +162,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.1(@types/react@19.2.2)
+      eruda:
+        specifier: ^3.4.3
+        version: 3.4.3
       eslint:
         specifier: ^9
         version: 9.37.0(jiti@2.6.1)
@@ -1694,6 +1697,9 @@ packages:
   enhanced-resolve@5.18.3:
     resolution: {integrity: sha512-d4lC8xfavMeBjzGr2vECC3fsGXziXZQyJxD868h2M/mBI3PwAuODxAkLkq5HYuvrPYcUtiLzsTo8U3PgX3Ocww==}
     engines: {node: '>=10.13.0'}
+
+  eruda@3.4.3:
+    resolution: {integrity: sha512-J2TsF4dXSspOXev5bJ6mljv0dRrxj21wklrDzbvPmYaEmVoC+2psylyRi70nUPFh1mTQfIBsSusUtAMZtUN+/w==}
 
   es-abstract@1.24.0:
     resolution: {integrity: sha512-WSzPgsdLtTcQwm4CROfS5ju2Wa1QQcVeT37jFjYzdFz1r9ahadC8B8/a4qxJxM+09F18iumCdRmlr96ZYkQvEg==}
@@ -4339,6 +4345,8 @@ snapshots:
     dependencies:
       graceful-fs: 4.2.11
       tapable: 2.3.0
+
+  eruda@3.4.3: {}
 
   es-abstract@1.24.0:
     dependencies:
