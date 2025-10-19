@@ -14,9 +14,10 @@ This document lists all tasks associated with PBI 4.
 | 4-4 | [Enhance PushToTalk component with improved UX](./4-4.md) | Proposed | Upgrade to 200x200px button with clear visual states and haptic feedback |
 | 4-5 | [Implement mobile optimizations and accessibility](./4-5.md) | Proposed | Add wake lock, prevent zoom, handle orientation changes, and visibility API |
 | 4-6 | [Implement conversation history and improved layout](./4-6.md) | Proposed | Create message bubbles, scrollable history, and fixed header/footer layout |
-| 4-7 | [Implement comprehensive error handling and fallbacks](./4-7.md) | Proposed | Add error recovery, auto-retry, text input fallback, and permission handling |
+| 4-7 | [Implement comprehensive error handling and fallbacks](./4-7.md) | InProgress | Add error recovery, auto-retry, text input fallback, and permission handling |
 | 4-8 | [Integration and end-to-end flow testing](./4-8.md) | Proposed | Integrate all components, test complete flow, and fix integration issues |
 | 4-9 | [Performance optimization and polish](./4-9.md) | Proposed | Optimize bundle size, add loading states, improve animations and UX polish |
 | 4-10 | [E2E CoS Test - Verify voice-enabled frontend](./4-10.md) | Proposed | End-to-end test verifying all voice interface acceptance criteria |
+| 4-11 | [Implement server-side speech transcription with Whisper](./4-11.md) | Done | Replace Web Speech API with MediaRecorder + Whisper for better reliability and mobile support |
 
 
