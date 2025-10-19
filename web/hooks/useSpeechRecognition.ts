@@ -48,7 +48,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
-        recognition.maxAlternatives = 1;
+        recognition.maxAlternatives = 3; // Increased for better accuracy
 
         // Event handlers
         recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -74,7 +74,18 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
           console.error('Speech recognition error:', event.error);
-          setError(event.error);
+          
+          // Provide user-friendly error messages
+          let errorMessage: string;
+          if (event.error === 'not-allowed') {
+            errorMessage = 'Microphone access not allowed. On mobile, HTTPS is required for voice input.';
+          } else if (event.error === 'no-speech') {
+            errorMessage = 'No speech detected. Try speaking closer to your device.';
+          } else {
+            errorMessage = event.error;
+          }
+          
+          setError(errorMessage);
           setIsListening(false);
         };
 
@@ -103,7 +114,10 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       setIsListening(true);
     } catch (err) {
       console.error('Failed to start recognition:', err);
-      setError('Failed to start speech recognition');
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : 'Failed to start speech recognition. Try using text input instead.';
+      setError(errorMessage);
     }
   }, [isListening]);
 
