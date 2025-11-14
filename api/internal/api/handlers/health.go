@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sean/janus/internal/session"
+	"github.com/sean/janus/pkg/session"
 )
 
 var startTime = time.Now()

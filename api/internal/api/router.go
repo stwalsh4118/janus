@@ -6,7 +6,7 @@ import (
 	"github.com/sean/janus/internal/api/middleware"
 	"github.com/sean/janus/internal/config"
 	"github.com/sean/janus/internal/logger"
-	"github.com/sean/janus/internal/session"
+	"github.com/sean/janus/pkg/session"
 )
 
 // SetupRouter configures and returns a Gin router

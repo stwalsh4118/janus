@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sean/janus/internal/api/response"
 	"github.com/sean/janus/internal/logger"
-	"github.com/sean/janus/internal/session"
+	"github.com/sean/janus/pkg/session"
 )
 
 // SessionHandler handles session-related requests

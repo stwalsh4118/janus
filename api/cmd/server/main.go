@@ -12,7 +12,7 @@ import (
 	"github.com/sean/janus/internal/api"
 	"github.com/sean/janus/internal/config"
 	"github.com/sean/janus/internal/logger"
-	"github.com/sean/janus/internal/session"
+	"github.com/sean/janus/pkg/session"
 )
 
 func main() {
@@ -45,6 +45,7 @@ func main() {
 		sessionManager,
 		sessionTimeout,
 		session.DefaultCleanupInterval,
+		log,
 	)
 	cleanupService.Start()
 
