@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stwalsh4118/janus/pkg/session"
+	"github.com/stwalsh4118/janus/api/pkg/session"
 )
 
 // MockSessionManager implements session.Manager for testing

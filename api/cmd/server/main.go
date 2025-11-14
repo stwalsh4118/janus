@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/stwalsh4118/janus/internal/api"
-	"github.com/stwalsh4118/janus/internal/config"
-	"github.com/stwalsh4118/janus/internal/logger"
-	"github.com/stwalsh4118/janus/pkg/session"
+	"github.com/stwalsh4118/janus/api/internal/api"
+	"github.com/stwalsh4118/janus/api/internal/config"
+	"github.com/stwalsh4118/janus/api/internal/logger"
+	"github.com/stwalsh4118/janus/api/pkg/session"
 )
 
 func main() {

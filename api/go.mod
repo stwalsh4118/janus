@@ -1,4 +1,4 @@
-module github.com/stwalsh4118/janus
+module github.com/stwalsh4118/janus/api
 
 go 1.25.1
 

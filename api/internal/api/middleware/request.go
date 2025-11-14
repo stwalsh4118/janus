@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/stwalsh4118/janus/internal/api/response"
-	"github.com/stwalsh4118/janus/internal/logger"
+	"github.com/stwalsh4118/janus/api/internal/api/response"
+	"github.com/stwalsh4118/janus/api/internal/logger"
 )
 
 const (

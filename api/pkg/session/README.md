@@ -13,7 +13,7 @@ A reusable Go package for managing cursor-agent chat sessions with automatic cle
 ## Installation
 
 ```bash
-go get github.com/stwalsh4118/janus/pkg/session
+go get github.com/stwalsh4118/janus/api/pkg/session
 ```
 
 ## Quick Start
@@ -24,7 +24,7 @@ package main
 import (
     "time"
     "github.com/rs/zerolog"
-    "github.com/stwalsh4118/janus/pkg/session"
+    "github.com/stwalsh4118/janus/api/pkg/session"
 )
 
 func main() {

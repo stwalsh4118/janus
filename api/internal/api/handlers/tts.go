@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stwalsh4118/janus/internal/api/middleware"
-	"github.com/stwalsh4118/janus/internal/config"
-	"github.com/stwalsh4118/janus/internal/logger"
+	"github.com/stwalsh4118/janus/api/internal/api/middleware"
+	"github.com/stwalsh4118/janus/api/internal/config"
+	"github.com/stwalsh4118/janus/api/internal/logger"
 )
 
 const (
