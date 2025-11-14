@@ -4,7 +4,7 @@ The session package has been moved from `internal/session` to `pkg/session`, mak
 
 ## Current Setup (Option 1: Same Module)
 
-The package is now at `github.com/sean/janus/pkg/session` and can be imported by:
+The package is now at `github.com/stwalsh4118/janus/pkg/session` and can be imported by:
 
 1. **Other packages in the same module** (already done)
 2. **Other Go projects** that import your module
@@ -14,16 +14,16 @@ The package is now at `github.com/sean/janus/pkg/session` and can be imported by
 In another Go project, add to `go.mod`:
 
 ```bash
-go get github.com/sean/janus/pkg/session
+go get github.com/stwalsh4118/janus/pkg/session
 ```
 
 Then import:
 
 ```go
-import "github.com/sean/janus/pkg/session"
+import "github.com/stwalsh4118/janus/pkg/session"
 ```
 
-**Note**: This requires your `github.com/sean/janus` repository to be publicly accessible (or accessible to the project using it).
+**Note**: This requires your `github.com/stwalsh4118/janus` repository to be publicly accessible (or accessible to the project using it).
 
 ## Option 2: Separate Module (For Maximum Reusability)
 

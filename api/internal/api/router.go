@@ -2,11 +2,11 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/sean/janus/internal/api/handlers"
-	"github.com/sean/janus/internal/api/middleware"
-	"github.com/sean/janus/internal/config"
-	"github.com/sean/janus/internal/logger"
-	"github.com/sean/janus/pkg/session"
+	"github.com/stwalsh4118/janus/internal/api/handlers"
+	"github.com/stwalsh4118/janus/internal/api/middleware"
+	"github.com/stwalsh4118/janus/internal/config"
+	"github.com/stwalsh4118/janus/internal/logger"
+	"github.com/stwalsh4118/janus/pkg/session"
 )
 
 // SetupRouter configures and returns a Gin router

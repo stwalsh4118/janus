@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sean/janus/internal/logger"
+	"github.com/stwalsh4118/janus/internal/logger"
 )
 
 // TTSHealthResponse represents the TTS health check response
